@@ -1,0 +1,75 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -File \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start-check.ps1\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -File \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-edit-tmdl.ps1\""
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -File \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-edit-pbir.ps1\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -File \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-commit-docs.ps1\""
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(git switch*)",
+      "Bash(git pull*)",
+      "Bash(git push origin feature/*)",
+      "Bash(git push origin fix/*)",
+      "Bash(gh pr create*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr list*)",
+      "Bash(gh pr comment*)",
+      "Bash(pwsh -File*)",
+      "Bash(pwsh -NoProfile -File*)",
+      "Bash(powershell.exe -File*)",
+      "Bash(powershell.exe -NoProfile -File*)"
+    ],
+    "ask": [
+      "Bash(git push*)"
+    ],
+    "deny": [
+      "Bash(git push origin main*)",
+      "Bash(git push origin master*)",
+      "Bash(git push origin release/*)",
+      "Bash(git push*--force*)",
+      "Bash(git push*-f *)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(gh pr merge*)",
+      "Bash(gh repo delete*)"
+    ]
+  }
+}

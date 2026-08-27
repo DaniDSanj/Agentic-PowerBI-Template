@@ -1,0 +1,49 @@
+# NO VERIFICADO CONTRA UN PROYECTO REAL DE AZURE DEVOPS (a diferencia de
+# .github/workflows/validate-pr.yml, que si se probo en un PR real). Es una
+# traduccion directa de la misma logica ya confirmada en GitHub Actions --
+# mismos dos scripts (tools/ci/validate-bpa.ps1, tools/ci/validate-pbir-schema.ps1),
+# mismo runner Windows, mismo criterio de bloqueo -- pero la sintaxis de
+# Azure Pipelines (variables de sistema, trigger de PR, pool) no se ha
+# ejecutado nunca en un pipeline real. Antes de darla por buena en un
+# proyecto que use Azure Repos/Azure Pipelines, ejecutala una vez de verdad
+# igual que se hizo aqui con GitHub Actions (PR real, violacion BPA a
+# proposito, page.json roto a proposito, confirmar fallo y luego exito).
+
+trigger: none
+
+pr:
+  branches:
+    include:
+      - main
+      - master
+      - develop
+      - release/*
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+  - checkout: self
+    fetchDepth: 0
+
+  - powershell: |
+      $dest = "$(Agent.TempDirectory)\TabularEditor2"
+      New-Item -ItemType Directory -Force -Path $dest | Out-Null
+      $url = "https://github.com/TabularEditor/TabularEditor/releases/download/2.28.0/TabularEditor.Portable.zip"
+      Invoke-WebRequest -Uri $url -OutFile "$dest\te2.zip"
+      Expand-Archive -Path "$dest\te2.zip" -DestinationPath $dest -Force
+      $teExe = Join-Path $dest 'TabularEditor.exe'
+      if (-not (Test-Path $teExe)) {
+        Write-Error "No se encontro TabularEditor.exe tras extraer el portable en '$dest'."
+        exit 1
+      }
+      Write-Host "##vso[task.setvariable variable=TABULAR_EDITOR_PATH]$teExe"
+    displayName: 'Instalar Tabular Editor 2 (CLI portable)'
+
+  - powershell: ./tools/ci/validate-bpa.ps1 -RepoRoot "$(Build.SourcesDirectory)"
+    displayName: 'Validar BPA (Tabular Editor 2)'
+    env:
+      TABULAR_EDITOR_PATH: $(TABULAR_EDITOR_PATH)
+
+  - powershell: ./tools/ci/validate-pbir-schema.ps1 -RepoRoot "$(Build.SourcesDirectory)" -BaseRef "origin/$(System.PullRequest.TargetBranch)"
+    displayName: 'Validar esquema PBIR'

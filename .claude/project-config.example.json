@@ -1,0 +1,6 @@
+{
+  "proyecto": "",
+  "escenario": "A|B",
+  "storageMode": "Import|DirectQuery|DirectLake",
+  "fechaBootstrap": "YYYY-MM-DD"
+}

@@ -1,0 +1,52 @@
+name: Validate PR
+
+# Revalida sobre cada PR lo mismo que los hooks locales de Claude Code
+# (post-edit-tmdl.ps1 / post-edit-pbir.ps1) comprueban en el momento de la
+# edicion: violaciones BPA de severidad Error y conformidad superficial de
+# PBIR con su $schema declarado. Runner windows-latest obligatorio -- Tabular
+# Editor 2 es una aplicacion .NET Framework de Windows, no corre en runners
+# Linux/macOS.
+#
+# Verificado en dogfooding real: la instalacion de TE2 se hace descargando
+# el .zip portable del release de GitHub (TabularEditor/TabularEditor),
+# NO via winget -- winget en un runner GitHub-hosted requiere aceptar
+# acuerdos de fuente de forma no interactiva y no se probo fiable; la
+# descarga directa es deterministica y fija la version exacta.
+
+on:
+  pull_request:
+    branches: [main, master, develop, 'release/**']
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Instalar Tabular Editor 2 (CLI portable)
+        env:
+          TE2_VERSION: '2.28.0'
+        run: |
+          $dest = "$env:RUNNER_TEMP\TabularEditor2"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          $url = "https://github.com/TabularEditor/TabularEditor/releases/download/$env:TE2_VERSION/TabularEditor.Portable.zip"
+          Invoke-WebRequest -Uri $url -OutFile "$dest\te2.zip"
+          Expand-Archive -Path "$dest\te2.zip" -DestinationPath $dest -Force
+          $teExe = Join-Path $dest 'TabularEditor.exe'
+          if (-not (Test-Path $teExe)) {
+            Write-Error "No se encontro TabularEditor.exe tras extraer el portable en '$dest'."
+            exit 1
+          }
+          "TABULAR_EDITOR_PATH=$teExe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Validar BPA (Tabular Editor 2)
+        run: ./tools/ci/validate-bpa.ps1 -RepoRoot "${{ github.workspace }}"
+
+      - name: Validar esquema PBIR
+        run: ./tools/ci/validate-pbir-schema.ps1 -RepoRoot "${{ github.workspace }}" -BaseRef "origin/${{ github.event.pull_request.base.ref }}"
