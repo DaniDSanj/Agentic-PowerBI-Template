@@ -7,13 +7,14 @@
     criterio de bloqueo, pero sobre el repo completo en vez de un solo fichero
     tocado, y con exit 1 (falla de job) en vez de exit 2 (bloqueo de hook).
 
-    NOTA (sin dogfooding todavia): la guarda inicial que comprueba
-    ".claude/project-config.json" se anadio al convertir la plantilla en un
-    GitHub Template Repository -- el objetivo es que un PR contra el propio
-    repositorio plantilla (sin ningun proyecto PBIP scaffolded todavia) no
-    falle este job por falta de *.SemanticModel. No se ha probado aun contra
-    un PR real al repo plantilla; verificar en la primera sesion que abra un
-    PR ahi antes de asumir que el guard funciona como se describe.
+    Confirmado en dogfooding real (Agentic-PowerBI-Template PR #1, runner
+    windows-latest): la guarda inicial que comprueba
+    ".claude/project-config.json" -- anadida al convertir la plantilla en un
+    GitHub Template Repository -- evita que un PR contra el propio
+    repositorio plantilla (sin ningun proyecto PBIP scaffolded todavia)
+    falle este job por falta de *.SemanticModel. El job paso en verde y el
+    log confirma que se tomo esta rama del script, no la de bloqueo por
+    modelo ausente.
 
     Verificado en dogfooding real (TE2 2.28.0, runner windows-latest):
     - TE2 debe apuntar a la subcarpeta "<Proyecto>.SemanticModel\definition"

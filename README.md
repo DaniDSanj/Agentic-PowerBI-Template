@@ -57,7 +57,7 @@ tools/
 └─ ci/                                     # validate-bpa.ps1, validate-pbir-schema.ps1 (los que invoca validate-pr.yml)
 ```
 
-**Nota sobre `.github/workflows/validate-pr.yml` activo en la propia plantilla**: al ser un GitHub Template Repository, este workflow correrá también sobre PRs contra la propia plantilla (antes de que ningún cliente exista todavía). `tools/ci/validate-bpa.ps1` tiene una guarda explícita para eso — si no existe `.claude/project-config.json` (siempre será el caso en la plantilla sin bootstrap), se omite la validación en vez de fallar el job. Sin dogfooding todavía sobre un PR real sobre este mismo repo — pendiente de confirmar en la primera sesión que abra uno.
+**Nota sobre `.github/workflows/validate-pr.yml` activo en la propia plantilla**: al ser un GitHub Template Repository, este workflow corre también sobre PRs contra la propia plantilla (antes de que ningún cliente exista todavía). `tools/ci/validate-bpa.ps1` tiene una guarda explícita para eso — si no existe `.claude/project-config.json` (siempre será el caso en la plantilla sin bootstrap), se omite la validación en vez de fallar el job. **Confirmado en dogfooding real** (`Agentic-PowerBI-Template` PR #1, cerrado tras la verificación): el job `validate` pasó en verde, y el log confirma que se tomó la rama de la guarda ("No existe '.claude\project-config.json': este repo todavia no ha pasado por el bootstrap... se omite la validacion BPA sin marcar el job como fallido") en vez de fallar por falta de `*.SemanticModel`.
 
 ## Aviso sobre el esquema de hooks/skills
 
