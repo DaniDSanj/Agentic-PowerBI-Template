@@ -12,10 +12,17 @@ name: Validate PR
 # NO via winget -- winget en un runner GitHub-hosted requiere aceptar
 # acuerdos de fuente de forma no interactiva y no se probo fiable; la
 # descarga directa es deterministica y fija la version exacta.
+#
+# Jobs adicionales (branch protection / seguridad, ver control-versiones.md):
+# - gitleaks: escaner de secretos, bloqueante, sobre el diff de la PR.
+# - source-branch-gate: solo corre contra main; falla si la PR no viene de
+#   dev o release/*. Ambos deben marcarse como required status checks en la
+#   proteccion de rama (tools/setup-branch-protection.ps1 los referencia por
+#   nombre de job).
 
 on:
   pull_request:
-    branches: [main, master, develop, 'release/**']
+    branches: [main, master, dev, develop, 'release/**']
 
 jobs:
   validate:
@@ -50,3 +57,43 @@ jobs:
 
       - name: Validar esquema PBIR
         run: ./tools/ci/validate-pbir-schema.ps1 -RepoRoot "${{ github.workspace }}" -BaseRef "origin/${{ github.event.pull_request.base.ref }}"
+
+  gitleaks:
+    # Escaner de secretos (gitleaks, open source) sobre el diff completo de la
+    # PR. Repo privado => sin GitHub Advanced Security nativo (de pago); esta
+    # es la capa autoritativa/bloqueante, complementaria al hook local
+    # PreToolUse (.claude/hooks/pre-commit-secrets-check.ps1), que es
+    # best-effort y no sustituye a este check.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ejecutar gitleaks sobre el rango de la PR
+        env:
+          GITLEAKS_VERSION: '8.21.2'
+        run: |
+          curl -sSL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tar.gz gitleaks
+          chmod +x gitleaks
+          ./gitleaks detect --source . --log-opts="origin/${{ github.event.pull_request.base.ref }}..HEAD" --redact --exit-code 1
+
+  source-branch-gate:
+    # main solo se promueve desde dev o release/*. GitHub no tiene un
+    # mecanismo nativo de branch protection para restringir la rama origen de
+    # una PR que se mergea a otra rama, asi que se fuerza aqui como required
+    # status check en la proteccion de main.
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar que la PR viene de dev o release/*
+        run: |
+          HEAD_REF="${{ github.head_ref }}"
+          if [ "$HEAD_REF" = "dev" ] || [[ "$HEAD_REF" == release/* ]]; then
+            echo "OK: PR contra main desde '$HEAD_REF'."
+          else
+            echo "::error::Las PRs contra main solo se aceptan desde 'dev' o 'release/*'. Esta PR viene de '$HEAD_REF'. Abre la PR contra 'dev' en su lugar."
+            exit 1
+          fi

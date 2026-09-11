@@ -14,7 +14,7 @@ Todo lo que sigue lee ese fichero para decidir sus ramas condicionales A/B.
 
 ## 2. Scaffold del proyecto
 
-`pbip-scaffold` (skill) crea la estructura de `arquitectura-repositorio.md` (`src/`, `themes/`, `templates/`, `tools/`, `docs/`, `.gitignore`, `.gitattributes`) y abre `feature/<nombre-informe>` según `control-versiones.md`. Si el PBIP no existe aún, este es el único punto del flujo en el que se declara explícitamente un paso manual en Desktop (crear el .pbip una vez para heredar su `.gitignore` base y convertir a TMDL/PBIR).
+`pbip-scaffold` (skill) crea la estructura de `arquitectura-repositorio.md` (`src/`, `themes/`, `templates/`, `tools/`, `docs/`, `.gitignore`, `.gitattributes`) y abre `feature/<nombre-informe>` **desde `dev`** (nunca desde `main`, que está protegida — ver `control-versiones.md`) según `control-versiones.md`. Si el PBIP no existe aún, este es el único punto del flujo en el que se declara explícitamente un paso manual en Desktop (crear el .pbip una vez para heredar su `.gitignore` base y convertir a TMDL/PBIR).
 
 ## 3. Bucle de desarrollo del modelo
 
@@ -41,16 +41,20 @@ El hook `post-edit-pbir.ps1` (`PostToolUse` sobre `Edit`/`Write` matcheando `**/
 
 ## 5. Cierre de la unidad de trabajo: commit y PR
 
-Commit semántico (`feat(model): ...`, `fix(report): ...`) sobre la rama `feature/`/`fix/` activa, siguiendo `control-versiones.md`. El agente commitea y abre el PR de forma autónoma, sin pedir permiso en cada paso — **pero nunca hace merge de su propio PR ni push directo a `main`/`release/*`**; `settings.json` lo refuerza técnicamente (deny explícito en `permissions`), no solo por instrucción. El merge queda siempre a criterio humano tras revisar el diff TMDL/PBIR.
+Commit semántico (`feat(model): ...`, `fix(report): ...`) sobre la rama `feature/`/`fix/` activa, siguiendo `control-versiones.md`. El agente commitea y abre el PR **contra `dev`** de forma autónoma, sin pedir permiso en cada paso — **pero nunca hace merge de su propio PR ni push directo a `dev`/`main`/`release/*`**; `settings.json` lo refuerza técnicamente (deny explícito en `permissions`), no solo por instrucción, y la branch protection de GitHub (`tools/setup-branch-protection.ps1`) lo refuerza además a nivel de plataforma. El merge queda siempre a criterio humano tras revisar el diff TMDL/PBIR.
+
+La promoción `dev → main` es una PR separada y explícita (no ocurre en cada cierre de unidad de trabajo) — el job `source-branch-gate` de CI bloquea cualquier PR contra `main` que no venga de `dev` o `release/*`.
 
 El hook `post-commit-docs.ps1` (`PostToolUse` sobre `Bash` matcheando `git commit`) invoca al subagente `docs-writer`, que regenera data dictionary, linaje de medidas y README de consumidor en `docs/` a partir de TMDL/DMVs — no bloquea el commit, corre después. Si prefieres regenerarla fuera de ese momento, el skill `docs-sync` hace lo mismo bajo demanda.
 
 ## 6. CI
 
-`.github/workflows/validate-pr.yml` (ya activo en la raíz de cualquier repo creado a partir de esta plantilla, incluida la propia plantilla — ver la nota sobre la guarda de `.claude/project-config.json` en `README.md`) es un fichero real, no una descripción: se dispara en cada PR contra `main`/`master`/`develop`/`release/**`, corre en runner `windows-latest` (Tabular Editor 2 es .NET Framework/Windows, no corre en Linux/macOS) y ejecuta dos scripts standalone, contraparte server-side de los hooks locales:
+`.github/workflows/validate-pr.yml` (ya activo en la raíz de cualquier repo creado a partir de esta plantilla, incluida la propia plantilla — ver la nota sobre la guarda de `.claude/project-config.json` en `README.md`) es un fichero real, no una descripción: se dispara en cada PR contra `main`/`master`/`dev`/`develop`/`release/**`, corre en runner `windows-latest` (Tabular Editor 2 es .NET Framework/Windows, no corre en Linux/macOS) y ejecuta dos scripts standalone, contraparte server-side de los hooks locales:
 
 - `tools/ci/validate-bpa.ps1` — repite la invocación TE2 confirmada de `post-edit-tmdl.ps1` (`TabularEditor.exe "<Proyecto>.SemanticModel\definition" -A tools\BPARules.json -V`, vía `System.Diagnostics.Process` con redirección explícita — `& $teExe ... 2>&1` no captura salida/exit-code de forma fiable ni siquiera fuera del contexto de hooks, reconfirmado en runner real) sobre **todos** los `*.SemanticModel` del repo, y falla el job (`exit 1`) si hay líneas `##vso[task.logissue type=error;]`.
 - `tools/ci/validate-pbir-schema.ps1` — repite la comprobación superficial de `post-edit-pbir.ps1` (JSON válido + array `required` de nivel superior del `$schema` declarado) mas no una validación completa de JSON Schema, solo sobre los ficheros PBIR tocados en el diff del PR (`git diff --name-only <base>...HEAD`).
+
+El workflow tiene además dos jobs de seguridad (`gitleaks`, `source-branch-gate`) que no dependen de TE2 ni de PBIR — detalle completo en `control-versiones.md`.
 
 Instalación de TE2 en el runner: descarga directa de `TabularEditor.Portable.zip` desde el release de GitHub `TabularEditor/TabularEditor` (versión fijada, `2.28.0` al validar esto) — **no** `winget`, que en un runner GitHub-hosted requeriría aceptar acuerdos de fuente de forma no interactiva y no se dio por fiable sin probarlo.
 
