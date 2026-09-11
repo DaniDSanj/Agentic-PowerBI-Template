@@ -14,7 +14,7 @@ Todo lo que sigue lee ese fichero para decidir sus ramas condicionales A/B.
 
 ## 2. Scaffold del proyecto
 
-`pbip-scaffold` (skill) crea la estructura de `arquitectura-repositorio.md` (`src/`, `themes/`, `templates/`, `tools/`, `docs/`, `.gitignore`, `.gitattributes`) y abre `feature/<nombre-informe>` según `control-versiones.md`. Si el PBIP no existe aún, este es el único punto del flujo en el que se declara explícitamente un paso manual en Desktop (crear el .pbip una vez para heredar su `.gitignore` base y convertir a TMDL/PBIR).
+`pbip-scaffold` (skill) crea la estructura de `arquitectura-repositorio.md` (`src/`, `themes/`, `templates/`, `tools/`, `docs/`, `.gitignore`, `.gitattributes`) y abre `feature/<nombre-informe>` **desde `dev`** (nunca desde `main`, que está protegida — ver `control-versiones.md`) según `control-versiones.md`. Si el PBIP no existe aún, este es el único punto del flujo en el que se declara explícitamente un paso manual en Desktop (crear el .pbip una vez para heredar su `.gitignore` base y convertir a TMDL/PBIR).
 
 ## 3. Bucle de desarrollo del modelo
 
@@ -41,7 +41,9 @@ El hook `post-edit-pbir.ps1` (`PostToolUse` sobre `Edit`/`Write` matcheando `**/
 
 ## 5. Cierre de la unidad de trabajo: commit y PR
 
-Commit semántico (`feat(model): ...`, `fix(report): ...`) sobre la rama `feature/`/`fix/` activa, siguiendo `control-versiones.md`. El agente commitea y abre el PR de forma autónoma, sin pedir permiso en cada paso — **pero nunca hace merge de su propio PR ni push directo a `main`/`release/*`**; `settings.json` lo refuerza técnicamente (deny explícito en `permissions`), no solo por instrucción. El merge queda siempre a criterio humano tras revisar el diff TMDL/PBIR.
+Commit semántico (`feat(model): ...`, `fix(report): ...`) sobre la rama `feature/`/`fix/` activa, siguiendo `control-versiones.md`. El agente commitea y abre el PR **contra `dev`** de forma autónoma, sin pedir permiso en cada paso — **pero nunca hace merge de su propio PR ni push directo a `dev`/`main`/`release/*`**; `settings.json` lo refuerza técnicamente (deny explícito en `permissions`), no solo por instrucción, y la branch protection de GitHub (`tools/setup-branch-protection.ps1`) lo refuerza además a nivel de plataforma. El merge queda siempre a criterio humano tras revisar el diff TMDL/PBIR.
+
+La promoción `dev → main` es una PR separada y explícita (no ocurre en cada cierre de unidad de trabajo) — el job `source-branch-gate` de CI bloquea cualquier PR contra `main` que no venga de `dev` o `release/*`.
 
 El hook `post-commit-docs.ps1` (`PostToolUse` sobre `Bash` matcheando `git commit`) invoca al subagente `docs-writer`, que regenera data dictionary, linaje de medidas y README de consumidor en `docs/` a partir de TMDL/DMVs — no bloquea el commit, corre después. Si prefieres regenerarla fuera de ese momento, el skill `docs-sync` hace lo mismo bajo demanda.
 
