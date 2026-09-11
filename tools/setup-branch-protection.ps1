@@ -3,12 +3,13 @@
     Aplica la branch protection de este repo (main + dev) via GitHub API (gh api).
 
 .DESCRIPTION
-    GitHub NO copia branch protection al crear un repo con "Use this template" --
-    solo copia ficheros y ramas. Este script existe para reaplicar la misma
-    configuracion en cualquier repo (esta plantilla, o cualquier repo cliente
-    creado a partir de ella): ejecutarlo una vez tras el primer push es
-    obligatorio, no opcional. Es idempotente -- puede volver a ejecutarse sin
-    efectos distintos de "queda igual".
+    GitHub NO copia branch protection ni ninguna otra configuracion del repo
+    al crear uno con "Use this template" -- copia ficheros, y de las ramas
+    solo la rama por defecto (main), no dev. Este script existe para
+    reaplicar la proteccion (y crear dev si falta) en cualquier repo (esta
+    plantilla, o cualquier repo cliente creado a partir de ella): ejecutarlo
+    una vez tras el primer push es obligatorio, no opcional. Es idempotente
+    -- puede volver a ejecutarse sin efectos distintos de "queda igual".
 
     Modelo de ramas (ver files/context/control-versiones.md):
     - dev: rama de integracion. Todo feature/fix pasa por PR contra dev,
@@ -19,6 +20,17 @@
       hace cumplir "solo desde dev/release/*" -- GitHub no tiene un
       mecanismo nativo de branch protection para restringir la rama origen
       de una PR, asi que se fuerza como required status check.
+
+    IMPORTANTE: este script NUNCA cambia el default_branch del repo -- debe
+    seguir siendo 'main' siempre, en la plantilla y en cada repo cliente.
+    "Use this template" (boton web o gh repo create) solo copia el
+    default_branch salvo que se marque explicitamente "Include all
+    branches" -- si el default_branch fuera 'dev', un repo cliente nuevo
+    naceria con una sola rama y sin 'main' en absoluto. 'dev' es solo la
+    rama de trabajo/integracion; no debe marcarse "Include all branches" al
+    crear el repo cliente -- este mismo script es quien crea 'dev' desde
+    'main' si todavia no existe (ver mas abajo), asi que no hace falta que
+    "Use this template" la traiga consigo.
 
     Requiere: gh CLI autenticado con permisos de administrador del repo
     (scope 'repo' como minimo). No gestiona secretos ni tokens -- usa la
@@ -137,9 +149,9 @@ Set-BranchProtection -Branch 'dev' -RequiredChecks @('validate', 'gitleaks') -Re
 # main: igual, mas el gate que obliga a que la PR venga de dev/release/*.
 Set-BranchProtection -Branch 'main' -RequiredChecks @('validate', 'gitleaks', 'source-branch-gate') -RequiredApprovingReviews 0
 
-Write-Host "Cambiando la rama por defecto del repo a 'dev'..." -ForegroundColor Cyan
-gh api "repos/$Owner/$Repo" -X PATCH -f default_branch='dev' | Out-Null
-Write-Host "OK." -ForegroundColor Green
+# Deliberadamente NO se toca default_branch: debe seguir siendo 'main' (ver
+# IMPORTANTE en la cabecera del fichero) para que "Use this template" siga
+# copiando 'main' y no 'dev'.
 
 Write-Host ""
 Write-Host "Listo. Verifica con:" -ForegroundColor Cyan
