@@ -49,10 +49,12 @@ El hook `post-commit-docs.ps1` (`PostToolUse` sobre `Bash` matcheando `git commi
 
 ## 6. CI
 
-`.github/workflows/validate-pr.yml` (ya activo en la raíz de cualquier repo creado a partir de esta plantilla, incluida la propia plantilla — ver la nota sobre la guarda de `.claude/project-config.json` en `README.md`) es un fichero real, no una descripción: se dispara en cada PR contra `main`/`master`/`develop`/`release/**`, corre en runner `windows-latest` (Tabular Editor 2 es .NET Framework/Windows, no corre en Linux/macOS) y ejecuta dos scripts standalone, contraparte server-side de los hooks locales:
+`.github/workflows/validate-pr.yml` (ya activo en la raíz de cualquier repo creado a partir de esta plantilla, incluida la propia plantilla — ver la nota sobre la guarda de `.claude/project-config.json` en `README.md`) es un fichero real, no una descripción: se dispara en cada PR contra `main`/`master`/`dev`/`develop`/`release/**`, corre en runner `windows-latest` (Tabular Editor 2 es .NET Framework/Windows, no corre en Linux/macOS) y ejecuta dos scripts standalone, contraparte server-side de los hooks locales:
 
 - `tools/ci/validate-bpa.ps1` — repite la invocación TE2 confirmada de `post-edit-tmdl.ps1` (`TabularEditor.exe "<Proyecto>.SemanticModel\definition" -A tools\BPARules.json -V`, vía `System.Diagnostics.Process` con redirección explícita — `& $teExe ... 2>&1` no captura salida/exit-code de forma fiable ni siquiera fuera del contexto de hooks, reconfirmado en runner real) sobre **todos** los `*.SemanticModel` del repo, y falla el job (`exit 1`) si hay líneas `##vso[task.logissue type=error;]`.
 - `tools/ci/validate-pbir-schema.ps1` — repite la comprobación superficial de `post-edit-pbir.ps1` (JSON válido + array `required` de nivel superior del `$schema` declarado) mas no una validación completa de JSON Schema, solo sobre los ficheros PBIR tocados en el diff del PR (`git diff --name-only <base>...HEAD`).
+
+El workflow tiene además dos jobs de seguridad (`gitleaks`, `source-branch-gate`) que no dependen de TE2 ni de PBIR — detalle completo en `control-versiones.md`.
 
 Instalación de TE2 en el runner: descarga directa de `TabularEditor.Portable.zip` desde el release de GitHub `TabularEditor/TabularEditor` (versión fijada, `2.28.0` al validar esto) — **no** `winget`, que en un runner GitHub-hosted requeriría aceptar acuerdos de fuente de forma no interactiva y no se dio por fiable sin probarlo.
 
