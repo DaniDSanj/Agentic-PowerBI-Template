@@ -133,15 +133,34 @@ if ($ClientName) {
         Write-Host "Visibilidad: Private -- branch protection y secret scanning nativo requieren GitHub Pro en plan Free (devolveran 403 si no lo tienes). Este script fallara explicitamente si ocurre, en vez de reportar exito falso." -ForegroundColor Yellow
     }
 
-    gh repo create $ClientName --template $templateSlug --clone $visibilityFlag
+    gh repo create $ClientName --template $templateSlug $visibilityFlag
     if ($LASTEXITCODE -ne 0) {
         throw "gh repo create fallo (exit code $LASTEXITCODE). Revisa el mensaje de gh arriba."
     }
 
-    # gh repo create --clone siempre clona en una carpeta con el nombre del
-    # repo (sin el owner), en el directorio actual -- no es configurable.
+    # OJO: NO se usa --clone aqui. Se vio "failed to run git: exit status 128"
+    # con --clone en pruebas, pero investigado a fondo la causa real en ese
+    # caso concreto fue una ruta de Windows demasiado larga (MAX_PATH) en el
+    # directorio desde el que se ejecutaba el script -- no una condicion de
+    # carrera de propagacion de GitHub (una prueba repetida desde una ruta
+    # corta funciono a la primera, sin reintentos). Aun asi, separar create y
+    # clone con un pequeno reintento es una defensa razonable y barata por si
+    # existiera alguna demora real de propagacion en otros escenarios -- no
+    # se ha confirmado que la haya, pero tampoco que no pueda darse nunca.
     $cloneDir = ($ClientName -split '/')[-1]
-    Write-Host "Repo creado y clonado en '$cloneDir'. Continuando configuracion dentro de esa carpeta..." -ForegroundColor Cyan
+    Write-Host "Repo creado. Clonando en '$cloneDir' (con reintentos por si acaso)..." -ForegroundColor Cyan
+    $maxAttempts = 6
+    $cloned = $false
+    for ($attempt = 1; $attempt -le $maxAttempts -and -not $cloned; $attempt++) {
+        if (Test-Path $cloneDir) { Remove-Item -Recurse -Force $cloneDir }
+        gh repo clone $ClientName $cloneDir 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { $cloned = $true } else { Start-Sleep -Seconds 5 }
+    }
+    if (-not $cloned) {
+        throw "No se pudo clonar '$ClientName' tras $maxAttempts intentos. El repo SI se creo en GitHub -- reintenta manualmente en unos segundos: gh repo clone $ClientName"
+    }
+
+    Write-Host "Clonado en '$cloneDir'. Continuando configuracion dentro de esa carpeta..." -ForegroundColor Cyan
     Set-Location $cloneDir
     $detected = Get-OriginOwnerRepo
     $Owner = $detected.Owner
@@ -157,8 +176,12 @@ Write-Host "Repo objetivo: $Owner/$Repo" -ForegroundColor Cyan
 
 function Test-BranchExists {
     param([string]$Branch)
-    $result = gh api "repos/$Owner/$Repo/branches/$Branch" 2>$null
-    return [bool]$result
+    # OJO: gh api escribe el cuerpo JSON del error (p.ej. 404 "Branch not
+    # found") en STDOUT, no solo en STDERR -- comprobar solo si $result es
+    # no-vacio da un falso positivo (un 404 real parece "existe"). Hay que
+    # mirar el exit code, no el contenido de la salida.
+    gh api "repos/$Owner/$Repo/branches/$Branch" 2>$null 1>$null
+    return ($LASTEXITCODE -eq 0)
 }
 
 if (-not (Test-BranchExists -Branch 'dev')) {
