@@ -15,7 +15,8 @@ Una vez este esqueleto se inicialice sobre un proyecto Power BI real, la estruct
 │  ├─ BPARules.json         # reglas Best Practice Analyzer de la comunidad
 │  ├─ deploy.ps1            # FabricPS-PBIP / fabric-cicd
 │  └─ tests/                # notebooks sempy con aserciones DAX (solo Escenario B)
-├─ docs/                    # data dictionary, ADRs, definiciones de KPI, README de consumidor
+├─ docs/                    # vault Obsidian-friendly: data dictionary, linaje de medidas, README de consumidor, adr/
+│  └─ adr/                  # decisiones de arquitectura del modelo/informe (NNNN-titulo.md)
 ├─ .github/workflows/  o  azure-pipelines.yml
 ├─ .gitignore
 └─ .gitattributes
@@ -30,7 +31,10 @@ Una vez este esqueleto se inicialice sobre un proyecto Power BI real, la estruct
 **/.pbi/editorSettings.json
 **/.pbi/unappliedChanges.json
 .claude/hook-debug.log
+.obsidian/
+docs/**/.obsidian/
 ```
+La última entrada cubre el caso de abrir `docs/` como vault de Obsidian localmente (ver "Convención Obsidian-friendly" en `herramientas-documentacion.md`): el propio contenido de `docs/` sí se versiona, solo se ignora la configuración local de vault que Obsidian genera al abrirlo.
 
 `.gitattributes`:
 ```

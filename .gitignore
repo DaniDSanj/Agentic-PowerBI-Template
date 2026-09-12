@@ -1,0 +1,9 @@
+# Configuración local de vault de Obsidian (ver "Convención Obsidian-friendly"
+# en files/context/herramientas-documentacion.md) — el contenido de docs/ sí
+# se versiona, solo se ignora lo que Obsidian genera al abrirlo localmente.
+.obsidian/
+docs/**/.obsidian/
+
+# Log de depuración de hooks de Claude Code — nunca contiene documentación,
+# solo trazas locales de ejecución.
+.claude/hook-debug.log

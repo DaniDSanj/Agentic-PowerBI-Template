@@ -32,7 +32,7 @@ Cada `git clone` de este mismo repositorio compartiría su historial de git entr
 - **BPA es obligatorio, no opcional**: cada edición de `.tmdl` dispara el hook `post-edit-tmdl` (Tabular Editor 2 CLI), y cada unidad de trabajo de modelo pasa además por el skill `bpa-validate` antes de commit.
 - **PBIR nunca se da por bueno sin validar contra su `$schema`** público — está en preview (GA prevista Q3 2026) y un JSON inválido puede impedir que Desktop abra el informe.
 - **El agente es autónomo en commits y PRs, pero nunca mergea sus propios PR** ni empuja directo a `dev`/`main`/`release/*` — reforzado tanto en las instrucciones como técnicamente en `permissions.deny` de `settings.json`.
-- **La documentación se regenera sola**: el hook `post-commit-docs` regenera data dictionary, linaje de medidas y README de consumidor tras cada commit que toque modelo o informe.
+- **La documentación se regenera sola, y es un vault Obsidian-friendly**: el hook `post-commit-docs` recuerda regenerar data dictionary, linaje de medidas y README de consumidor tras cada commit que toque modelo/informe (o `docs/CHANGELOG.md`/`docs/decisiones/` si lo que cambia es el propio mecanismo de la plantilla) — y desde esta revisión, `tools/ci/validate-docs-freshness.ps1` falla el PR si esa actualización no llegó a hacerse. Todo en `docs/` lleva frontmatter y wikilinks para poder abrirse directamente como vault de Obsidian, sin depender de sus funciones de pago (Sync/Publish).
 - **Nunca se gestionan credenciales, cadenas de conexión ni gateways** desde el agente, en ningún fichero de este flujo.
 - **`main` está protegida y solo se promueve desde `dev`/`release/*`**: todo desarrollo pasa primero por `dev` (PR revisada + CI en verde); una PR contra `main` que no venga de `dev` o `release/*` es bloqueada por el job `source-branch-gate` de CI. Detalle en `files/context/control-versiones.md`.
 - **Escaneo de secretos en tres capas**: GitHub secret scanning + push protection nativos (repo público → gratis), `gitleaks` en CI como required status check, y un hook local `PreToolUse` best-effort antes de cada `git commit`.
@@ -60,7 +60,9 @@ files/
 └─ workflows/validate-pr.yml               # CI real, activo desde el primer commit del repo cliente
 azure-pipelines.yml                        # equivalente Azure DevOps, sin activar salvo que el repo destino lo use
 tools/
-└─ ci/                                     # validate-bpa.ps1, validate-pbir-schema.ps1 (los que invoca validate-pr.yml)
+└─ ci/                                     # validate-bpa.ps1, validate-pbir-schema.ps1, validate-docs-freshness.ps1
+docs/                                      # vault Obsidian-friendly: CHANGELOG.md + decisiones/ (modo plantilla, ya activo aquí)
+.gitignore                                 # incluye .obsidian/ para quien abra docs/ como vault local
 ```
 
 **Nota sobre `.github/workflows/validate-pr.yml` activo en la propia plantilla**: al ser un GitHub Template Repository, este workflow corre también sobre PRs contra la propia plantilla (antes de que ningún cliente exista todavía). `tools/ci/validate-bpa.ps1` tiene una guarda explícita para eso — si no existe `.claude/project-config.json` (siempre será el caso en la plantilla sin bootstrap), se omite la validación en vez de fallar el job. **Confirmado en dogfooding real** (`Agentic-PowerBI-Template` PR #1, cerrado tras la verificación): el job `validate` pasó en verde, y el log confirma que se tomó la rama de la guarda ("No existe '.claude\project-config.json': este repo todavia no ha pasado por el bootstrap... se omite la validacion BPA sin marcar el job como fallido") en vez de fallar por falta de `*.SemanticModel`.
