@@ -6,7 +6,7 @@
 .DESCRIPTION
     Capa local, best-effort, del escaneo de secretos. La capa autoritativa y
     bloqueante de verdad es el job 'gitleaks' de .github/workflows/validate-pr.yml
-    (required status check en main/dev via tools/setup-branch-protection.ps1).
+    (required status check en main/dev via tools/setup-github-repo.ps1).
     Este hook solo evita que el secreto llegue a crearse como commit local en
     primer lugar -- pero si gitleaks no esta instalado en esta maquina, avisa
     y deja pasar sin bloquear (no se fabrica una verificacion que no se hizo;
