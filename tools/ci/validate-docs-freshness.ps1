@@ -18,10 +18,12 @@
     (la condicion de modo cliente simplemente no llega a aplicar nunca) --
     ese es el caso de la propia plantilla sin bootstrap todavia.
 
-    NOTA DE HONESTIDAD (ver docs/CHANGELOG.md): este script se añadio en la
-    misma revision que lo introduce y todavia no tiene su propio dogfooding
-    contra un PR real, a diferencia de validate-bpa.ps1/validate-pbir-schema.ps1
-    -- no se debe dar por probado hasta ejecutarlo en un PR de verdad.
+    NOTA DE HONESTIDAD (ver docs/CHANGELOG.md): verificado localmente contra
+    dos ramas de prueba reales (falla si el diff toca .claude/ sin tocar
+    docs/, pasa si los toca a la vez), pero todavia sin ejecutarse como job
+    real de GitHub Actions dentro de un PR -- a diferencia de
+    validate-bpa.ps1/validate-pbir-schema.ps1, no se debe dar por
+    completamente probado hasta verificarlo ahi.
 
 .PARAMETER RepoRoot
     Raiz del repo. Por defecto, el directorio de trabajo actual.

@@ -19,7 +19,7 @@ Se amplía el hook `.claude/hooks/post-commit-docs.ps1` para detectar también c
 
 **Confirmado en dogfooding real** (esta misma sesión): el commit que introdujo este cambio tocaba `.claude/`, `tools/` y `files/context/` — el hook ampliado disparó correctamente el aviso de "modo plantilla" (`[post-commit-docs] El ultimo commit toca modo plantilla: anade una entrada a docs/CHANGELOG.md...`) en el turno siguiente al commit, igual que ya estaba confirmado para el modo cliente. Nótese que el hook no comprueba si `docs/CHANGELOG.md` ya se tocó en el mismo commit (a diferencia del job de CI) — sigue siendo un recordatorio incondicional, no una verificación de frescura; por eso disparó incluso en el commit que ya incluía esta misma entrada.
 
-**Pendiente de dogfooding real**: el nuevo job de CI (`validate-docs-freshness`) todavía no se ha probado contra un PR real — a diferencia del hook, no se da por confirmado hasta ejecutarlo en la práctica (ver `files/context/flujo-trabajo.md`).
+**Verificado en local, pendiente en CI real**: `tools/ci/validate-docs-freshness.ps1` se probó localmente contra dos ramas de prueba reales (una que tocaba `.claude/settings.json` sin tocar `docs/`, y esta propia rama de trabajo que sí toca `docs/CHANGELOG.md`) — falla con `exit 1` en el primer caso y pasa en el segundo, tal como se diseñó. Lo que **no** está confirmado todavía es la ejecución real como job de `.github/workflows/validate-pr.yml` dentro de un PR (runner `windows-latest`, checkout de GitHub Actions) — no se da por probado hasta verificarlo ahí (ver `files/context/flujo-trabajo.md`).
 
 ## 2026-09-12 — Bootstrap de repo cliente fusionado en un único script
 
