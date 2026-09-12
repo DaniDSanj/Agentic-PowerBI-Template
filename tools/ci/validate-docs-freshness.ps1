@@ -20,10 +20,8 @@
 
     NOTA DE HONESTIDAD (ver docs/CHANGELOG.md): verificado localmente contra
     dos ramas de prueba reales (falla si el diff toca .claude/ sin tocar
-    docs/, pasa si los toca a la vez), pero todavia sin ejecutarse como job
-    real de GitHub Actions dentro de un PR -- a diferencia de
-    validate-bpa.ps1/validate-pbir-schema.ps1, no se debe dar por
-    completamente probado hasta verificarlo ahi.
+    docs/, pasa si los toca a la vez) y confirmado en verde como job real de
+    GitHub Actions dentro de un PR (Agentic-PowerBI-Template PR #10).
 
 .PARAMETER RepoRoot
     Raiz del repo. Por defecto, el directorio de trabajo actual.

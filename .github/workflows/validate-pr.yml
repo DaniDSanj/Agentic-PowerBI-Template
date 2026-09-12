@@ -22,8 +22,8 @@ name: Validate PR
 # - validate-docs-freshness: falla si el PR toca modelo/informe o el
 #   mecanismo de la plantilla sin tocar la documentacion correspondiente en
 #   docs/ (ver files/context/flujo-trabajo.md, paso 6). Anadido en esta
-#   revision y verificado localmente (dos ramas de prueba reales), pero
-#   todavia sin ejecutarse como job real de GitHub Actions -- ver docs/CHANGELOG.md.
+#   revision, verificado localmente y confirmado en verde en un PR real de
+#   GitHub Actions (Agentic-PowerBI-Template PR #10) -- ver docs/CHANGELOG.md.
 
 on:
   pull_request:
