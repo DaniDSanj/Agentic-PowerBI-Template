@@ -17,7 +17,9 @@ Se amplía el hook `.claude/hooks/post-commit-docs.ps1` para detectar también c
 
 **Motivo**: la documentación autónoma existente (`docs-writer`, `docs-sync`) solo cubría el caso "repo cliente con modelo PBI"; no había ningún mecanismo para documentar cambios en el funcionamiento de la propia plantilla, que es justamente lo que este repo necesita documentar de sí mismo.
 
-**Pendiente de dogfooding real** (ver `files/context/flujo-trabajo.md`, sección de honestidad sobre hooks/skills): el nuevo job de CI (`validate-docs-freshness`) y la ampliación del hook no se han probado todavía contra un PR real — no se dan por confirmados hasta ejecutarlos en la práctica.
+**Confirmado en dogfooding real** (esta misma sesión): el commit que introdujo este cambio tocaba `.claude/`, `tools/` y `files/context/` — el hook ampliado disparó correctamente el aviso de "modo plantilla" (`[post-commit-docs] El ultimo commit toca modo plantilla: anade una entrada a docs/CHANGELOG.md...`) en el turno siguiente al commit, igual que ya estaba confirmado para el modo cliente. Nótese que el hook no comprueba si `docs/CHANGELOG.md` ya se tocó en el mismo commit (a diferencia del job de CI) — sigue siendo un recordatorio incondicional, no una verificación de frescura; por eso disparó incluso en el commit que ya incluía esta misma entrada.
+
+**Pendiente de dogfooding real**: el nuevo job de CI (`validate-docs-freshness`) todavía no se ha probado contra un PR real — a diferencia del hook, no se da por confirmado hasta ejecutarlo en la práctica (ver `files/context/flujo-trabajo.md`).
 
 ## 2026-09-12 — Bootstrap de repo cliente fusionado en un único script
 
