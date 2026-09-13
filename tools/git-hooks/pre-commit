@@ -1,0 +1,14 @@
+#!/bin/sh
+# Shim POSIX: git invoca los hooks via el 'sh' que trae Git for Windows
+# (o el del sistema en macOS/Linux), asi que la logica real vive en
+# pre-commit.ps1 y este fichero solo la reenvia a PowerShell. Ver
+# 'tools/setup-github.ps1 -LocalGuardOnly' para como se activa este hook
+# (git config core.hooksPath tools/git-hooks) -- core.hooksPath es config
+# LOCAL del clon, no viaja con el repo: cada clon debe ejecutarlo una vez.
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if command -v pwsh >/dev/null 2>&1; then
+    pwsh -NoProfile -ExecutionPolicy Bypass -File "$HOOK_DIR/pre-commit.ps1"
+else
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOOK_DIR/pre-commit.ps1"
+fi

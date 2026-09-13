@@ -17,8 +17,13 @@ name: Validate PR
 # - gitleaks: escaner de secretos, bloqueante, sobre el diff de la PR.
 # - source-branch-gate: solo corre contra main; falla si la PR no viene de
 #   dev o release/*. Ambos deben marcarse como required status checks en la
-#   proteccion de rama (tools/setup-github-repo.ps1 los referencia por
+#   proteccion de rama (tools/setup-github.ps1 los referencia por
 #   nombre de job).
+# - validate-docs-freshness: falla si el PR toca modelo/informe o el
+#   mecanismo de la plantilla sin tocar la documentacion correspondiente en
+#   docs/ (ver files/context/flujo-trabajo.md, paso 6). Anadido en esta
+#   revision, verificado localmente y confirmado en verde en un PR real de
+#   GitHub Actions (Agentic-PowerBI-Template PR #10) -- ver docs/CHANGELOG.md.
 
 on:
   pull_request:
@@ -79,6 +84,23 @@ jobs:
           tar -xzf gitleaks.tar.gz gitleaks
           chmod +x gitleaks
           ./gitleaks detect --source . --log-opts="origin/${{ github.event.pull_request.base.ref }}..HEAD" --redact --exit-code 1
+
+  validate-docs-freshness:
+    # Contraparte de servidor del hook local post-commit-docs.ps1: verifica de
+    # verdad, en vez de solo recordar, que docs/ se actualizo cuando el PR
+    # toca modelo/informe o el mecanismo de la propia plantilla.
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validar frescura de docs/
+        run: ./tools/ci/validate-docs-freshness.ps1 -RepoRoot "${{ github.workspace }}" -BaseRef "origin/${{ github.event.pull_request.base.ref }}"
 
   source-branch-gate:
     # main solo se promueve desde dev o release/*. GitHub no tiene un
