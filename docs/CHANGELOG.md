@@ -9,6 +9,14 @@ Registro cronológico (más reciente arriba) de cambios reales al **mecanismo** 
 
 Generado y mantenido por el subagente `docs-writer` (modo plantilla) — ver `.claude/agents/docs-writer.md`. Es acumulativo: cada regeneración añade una entrada nueva aquí arriba, nunca sobrescribe las anteriores.
 
+## 2026-09-13 — Bug real corregido: condición de carrera en `setup-github.ps1 -ClientName` al clonar
+
+Al recrear el repo sandbox `Agentic-PowerBI-Sandbox` (tras promocionar `dev→main` con el contenido de `install-tools.ps1`), el clon local quedó completamente vacío (`git status` → "No commits yet") pese a que el script reportó éxito. Causa real: `gh repo clone` se ejecutó antes de que GitHub terminara de propagar el commit inicial de "Use this template" — clonar un repo remoto que técnicamente ya existe pero todavía no tiene contenido también sale con exit code 0, y el bucle de reintentos de entonces solo comprobaba ese exit code, no el contenido real del clon. Confirmado con `gh api repos/.../commits`: el commit real sí existía en el remoto segundos después.
+
+Esto es la confirmación real de un escenario que el propio script ya dejaba anotado como "no confirmado, pero tampoco descartado" en un comentario anterior (distinto del bug de `MAX_PATH` que sí se investigó y descartó como causa de un fallo de `--clone` en una sesión previa). Corregido: tras cada `gh repo clone` con exit 0, se comprueba además que `git rev-parse HEAD` resuelve a un commit real en el clon; si no, se trata como intento fallido y se reintenta (hasta los mismos 6 intentos con 5s de espera ya existentes). Mitigado manualmente en la sesión donde se detectó (reclonando y reaplicando `-LocalGuardOnly`) antes de corregir el script.
+
+**Pendiente**: no se ha vuelto a ejecutar `-ClientName` de extremo a extremo tras este fix para confirmar que la nueva comprobación realmente evita el problema (solo se verificó la lógica leyendo el diff) — mismo criterio de honestidad que el resto de esta plantilla.
+
 ## 2026-09-13 — `tools/install-tools.ps1`: instalación de toolchain separada de `setup-github.ps1`
 
 Surgió al crear el repo sandbox de dogfooding (`Agentic-PowerBI-Sandbox`): `tools/setup-github.ps1` deja como pendiente manual instalar `gitleaks`/Tabular Editor 2/DAX Studio (solo los detecta y avisa si faltan, nunca los instala — alcance deliberado ya documentado en la cabecera de ese script). Se planteó fusionar la instalación dentro de `setup-github.ps1` para tener un único punto de entrada; se decidió **no** hacerlo y crear en su lugar `tools/install-tools.ps1`, separado.

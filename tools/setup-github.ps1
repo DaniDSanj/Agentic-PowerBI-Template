@@ -281,11 +281,19 @@ if ($ClientName) {
     # con --clone en pruebas, pero investigado a fondo la causa real en ese
     # caso concreto fue una ruta de Windows demasiado larga (MAX_PATH) en el
     # directorio desde el que se ejecutaba el script -- no una condicion de
-    # carrera de propagacion de GitHub (una prueba repetida desde una ruta
-    # corta funciono a la primera, sin reintentos). Aun asi, separar create y
-    # clone con un pequeno reintento es una defensa razonable y barata por si
-    # existiera alguna demora real de propagacion en otros escenarios -- no
-    # se ha confirmado que la haya, pero tampoco que no pueda darse nunca.
+    # carrera de propagacion de GitHub. Aun asi, separar create y clone con
+    # un pequeno reintento es una defensa razonable y barata por si existiera
+    # alguna demora real de propagacion en otros escenarios.
+    #
+    # Esa demora de propagacion SI se confirmo despues, en otra sesion de
+    # dogfooding (ver docs/CHANGELOG.md): "gh repo clone" salio con exit code
+    # 0 mientras GitHub todavia no habia terminado de copiar el commit
+    # inicial de "Use this template" -- el clon resultante existia pero
+    # tenia 0 commits ("git status" -> "No commits yet"), y el bucle de
+    # reintentos de entonces solo miraba el exit code de "gh repo clone", que
+    # tambien es 0 al clonar un repo remoto vacio. Por eso ahora, ademas del
+    # exit code, se verifica que el HEAD del clon resuelve a un commit real
+    # antes de darlo por valido.
     $cloneDir = ($ClientName -split '/')[-1]
     Write-Host "Repo creado. Clonando en '$cloneDir' (con reintentos por si acaso)..." -ForegroundColor Cyan
     $maxAttempts = 6
@@ -293,10 +301,22 @@ if ($ClientName) {
     for ($attempt = 1; $attempt -le $maxAttempts -and -not $cloned; $attempt++) {
         if (Test-Path $cloneDir) { Remove-Item -Recurse -Force $cloneDir }
         gh repo clone $ClientName $cloneDir 2>$null | Out-Null
-        if ($LASTEXITCODE -eq 0) { $cloned = $true } else { Start-Sleep -Seconds 5 }
+        if ($LASTEXITCODE -eq 0) {
+            git -C $cloneDir rev-parse HEAD *> $null
+            if ($LASTEXITCODE -eq 0) {
+                $cloned = $true
+            }
+            else {
+                Write-Host "Aviso: '$cloneDir' se clono pero esta vacio (GitHub todavia propagando el commit inicial) -- reintentando..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 5
+            }
+        }
+        else {
+            Start-Sleep -Seconds 5
+        }
     }
     if (-not $cloned) {
-        throw "No se pudo clonar '$ClientName' tras $maxAttempts intentos. El repo SI se creo en GitHub -- reintenta manualmente en unos segundos: gh repo clone $ClientName"
+        throw "No se pudo clonar '$ClientName' con contenido real tras $maxAttempts intentos (el clon salio vacio, o 'gh repo clone' fallo, en cada intento). El repo SI se creo en GitHub -- reintenta manualmente en unos segundos: gh repo clone $ClientName"
     }
 
     Write-Host "Clonado en '$cloneDir'. Continuando configuracion dentro de esa carpeta..." -ForegroundColor Cyan
