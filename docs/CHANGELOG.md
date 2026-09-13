@@ -9,6 +9,14 @@ Registro cronológico (más reciente arriba) de cambios reales al **mecanismo** 
 
 Generado y mantenido por el subagente `docs-writer` (modo plantilla) — ver `.claude/agents/docs-writer.md`. Es acumulativo: cada regeneración añade una entrada nueva aquí arriba, nunca sobrescribe las anteriores.
 
+## 2026-09-13 — `merge-audit`/`audit-history` confirmados en dogfooding real
+
+Se probó el subagente `merge-audit` de extremo a extremo contra un segundo repo privado de prueba real (`DaniDSanj/test-merge-audit-dogfood-20260913`, creado igual que el anterior vía `tools/setup-github.ps1 -ClientName ... -Visibility Private`): se abrió una PR (`#1`, `feature/red-ci-demo` → `dev`) con un patrón de secreto simulado a propósito para forzar el job `gitleaks` a rojo, y se mergeó manualmente desde la web de GitHub pese al CI en rojo — posible precisamente porque, al ser un repo privado en plan Free, la branch protection no pudo aplicarse (403 ya confirmado) y el botón "Merge" no estaba bloqueado.
+
+Al invocar `merge-audit` contra ese repo, detectó correctamente el merge commit `51280ec` en `dev`, encontró su PR asociada (#1) y reportó el hallazgo exacto: `gitleaks` en `FAILURE` en el momento del merge, `validate` en `SUCCESS`, `source-branch-gate` en `SKIPPED` (correcto, ese job solo aplica contra `main`). Confirmó también, correctamente, que `main` no tenía ningún merge que auditar todavía (0 en total) y que no había falsos positivos de "merge sin PR asociada".
+
+Con esto queda dogfoodeada toda la capa de gobernanza local descrita en las dos entradas anteriores de este mismo día — el único punto que quedaba genuinamente sin probar. Repos de prueba borrados tras la confirmación (el remoto, manualmente por el usuario en ambos casos; `gh repo delete` sigue denegado para el agente).
+
 ## 2026-09-13 — Bug real corregido: el guard local nunca se activaba en el escenario para el que existe
 
 Dogfooding contra un repo privado real creado a propósito (`DaniDSanj/test-obsidian-docs-dogfood-20260913`, vía `pwsh -File tools/setup-github.ps1 -ClientName ... -Visibility Private`) reveló que el automatismo "si el repo es privado, activa el guard local al terminar" (entrada anterior de este mismo día) **nunca llegaba a ejecutarse** en el caso real: `Set-BranchProtection` lanzaba una excepción en el primer 403 (esperado en plan Free sobre repo privado) y, con `$ErrorActionPreference = 'Stop'`, esa excepción abortaba el script completo antes de llegar al bloque que activa `core.hooksPath` — precisamente en el único escenario para el que ese automatismo se diseñó.
