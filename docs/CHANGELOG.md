@@ -9,6 +9,14 @@ Registro cronológico (más reciente arriba) de cambios reales al **mecanismo** 
 
 Generado y mantenido por el subagente `docs-writer` (modo plantilla) — ver `.claude/agents/docs-writer.md`. Es acumulativo: cada regeneración añade una entrada nueva aquí arriba, nunca sobrescribe las anteriores.
 
+## 2026-09-13 — Bug real corregido: el guard local nunca se activaba en el escenario para el que existe
+
+Dogfooding contra un repo privado real creado a propósito (`DaniDSanj/test-obsidian-docs-dogfood-20260913`, vía `pwsh -File tools/setup-github.ps1 -ClientName ... -Visibility Private`) reveló que el automatismo "si el repo es privado, activa el guard local al terminar" (entrada anterior de este mismo día) **nunca llegaba a ejecutarse** en el caso real: `Set-BranchProtection` lanzaba una excepción en el primer 403 (esperado en plan Free sobre repo privado) y, con `$ErrorActionPreference = 'Stop'`, esa excepción abortaba el script completo antes de llegar al bloque que activa `core.hooksPath` — precisamente en el único escenario para el que ese automatismo se diseñó.
+
+Corregido: `$repoVisibility` se calcula ahora **antes** de intentar branch protection (no después), y las dos llamadas a `Set-BranchProtection` (`dev`, `main`) quedan envueltas en un `try/catch` — si el repo es privado, un 403 se avisa y el script continúa hasta activar el guard local; si el repo es público, el mismo fallo sigue relanzándose (`throw`), porque ahí sí sería un error real e inesperado.
+
+**Confirmado en dogfooding real, con el fix aplicado, contra el mismo repo privado**: re-ejecutar `pwsh -File tools/setup-github.ps1` (modo "reaplicar", sin `-ClientName`) desde el clon ya existente terminó con `exit 0`, imprimiendo el mismo 403 esperado como aviso (no como error fatal) y, a continuación, `OK: core.hooksPath -> tools/git-hooks` — verificado también con `git config --get core.hooksPath` tras la ejecución. El repo de prueba se creó con `gh repo create --template` real y se limpió el clon local al terminar; el repo remoto en GitHub **no se pudo borrar** desde esta sesión (`gh repo delete` está en la lista `deny` de `.claude/settings.json`) — queda pendiente de borrado manual por el usuario.
+
 ## 2026-09-13 — Fusión de setup-github-repo.ps1 + setup-local-git-guard.ps1 en tools/setup-github.ps1
 
 A petición del usuario, los dos scripts de gobernanza de repo (`tools/setup-github-repo.ps1`, que configura branch protection/secret scanning vía `gh api`, y `tools/setup-local-git-guard.ps1`, que activa el guard local de la entrada siguiente) se fusionan en un único `tools/setup-github.ps1` (`git mv` para conservar el historial del primero).
@@ -19,7 +27,9 @@ Por eso `tools/setup-github.ps1` gana un tercer modo, `-LocalGuardOnly [-RepoRoo
 
 Se actualizaron todas las referencias vivas a los nombres antiguos (`README.md`, `control-versiones.md`, `arquitectura-repositorio.md`, los skills `local-git-guard`/`audit-history`, el hook `pre-commit-secrets-check.ps1`, los hooks nativos `tools/git-hooks/pre-commit*` y el comentario de `validate-pr.yml`) — las menciones históricas de renames anteriores (`setup-branch-protection.ps1` → `setup-github-repo.ps1`) se dejan intactas como narrativa, no se reescribe historia.
 
-**Confirmado en dogfooding real** (sesión posterior, repo sandbox descartable fuera de este árbol de trabajo, sin `gh` instalado ni invocado en ningún momento): `pwsh -File tools/setup-github.ps1 -LocalGuardOnly -RepoRoot <ruta>` fijó `core.hooksPath` a `tools/git-hooks`, detectó correctamente `gitleaks` ausente y Tabular Editor 2 presente (vía `TabularEditor.exe` en el `PATH`), y avisó de que `.claude/project-config.json` no existía todavía — todo sin tocar la API de GitHub. Sigue pendiente, porque no se ha probado, el automatismo que activa el guard local automáticamente al final de los modos que sí tocan GitHub (`-ClientName`/sin parámetros) sobre un repo privado real — esa parte sigue requiriendo `gh` autenticado con permisos de administrador, fuera de alcance de un sandbox local.
+**Confirmado en dogfooding real** (sesión posterior, repo sandbox descartable fuera de este árbol de trabajo, sin `gh` instalado ni invocado en ningún momento): `pwsh -File tools/setup-github.ps1 -LocalGuardOnly -RepoRoot <ruta>` fijó `core.hooksPath` a `tools/git-hooks`, detectó correctamente `gitleaks` ausente y Tabular Editor 2 presente (vía `TabularEditor.exe` en el `PATH`), y avisó de que `.claude/project-config.json` no existía todavía — todo sin tocar la API de GitHub.
+
+**Confirmado también el automatismo sobre GitHub real, en una sesión posterior** (ver la entrada de más arriba, "Bug real corregido..."): al probarlo contra un repo privado real (`gh repo create --template` + `gh api` con permisos de administrador), se encontró que ese automatismo nunca llegaba a ejecutarse por un bug real (excepción no capturada que abortaba el script antes de llegar ahí) — corregido, y reconfirmado en verde tras el fix.
 
 ## 2026-09-13 — Capa de gobernanza local para repo cliente privado (Free)
 

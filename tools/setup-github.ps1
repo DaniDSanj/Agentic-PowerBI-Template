@@ -91,9 +91,14 @@
     or make this repository public to enable this feature". No hay
     workaround gratuito -- o el repo es publico, o el owner tiene GitHub Pro
     (de pago, requiere autorizacion explicita del cliente por
-    files/context/limites-duros.md). Este script falla explicitamente (no
-    reporta "OK" con un 403 de fondo) si se topa con ese bloqueo -- decide
-    la visibilidad ANTES de ejecutarlo, con esta consecuencia ya conocida.
+    files/context/limites-duros.md). Este script NUNCA reporta "OK" con un
+    403 de fondo -- ese error se imprime siempre en rojo. Pero, a
+    diferencia de una version anterior (bug real encontrado y corregido en
+    dogfooding, ver docs/CHANGELOG.md), en un repo PRIVADO ese 403 ya NO
+    aborta el script entero: se avisa y se continua, precisamente para
+    llegar al bloque que activa el guard local automaticamente (la
+    mitigacion pensada para este caso). En un repo PUBLICO, en cambio, ese
+    mismo fallo SI aborta el script (seria inesperado).
 
 .PARAMETER ClientName
     Si se pasa, activa el modo "crear repo nuevo". Admite "Nombre" (se crea
@@ -308,6 +313,17 @@ else {
 
 Write-Host "Repo objetivo: $Owner/$Repo" -ForegroundColor Cyan
 
+# Se calcula ANTES de intentar branch protection (no despues, como en la
+# version original) por un bug real encontrado en dogfooding: si el repo es
+# privado en plan Free, Set-BranchProtection lanza una excepcion (403) que
+# aborta el script entero por $ErrorActionPreference='Stop' -- el bloque de
+# mas abajo que activa el guard local automaticamente para repos privados
+# nunca llegaba a ejecutarse, precisamente en el unico escenario para el que
+# existe. Confirmado con un repo de prueba real
+# (test-obsidian-docs-dogfood-20260913): el script terminaba con excepcion
+# en 'dev' sin haber activado el guard local en absoluto.
+$repoVisibility = gh api "repos/$Owner/$Repo" --jq '.visibility'
+
 function Test-BranchExists {
     param([string]$Branch)
     # OJO: gh api escribe el cuerpo JSON del error (p.ej. 404 "Branch not
@@ -371,17 +387,33 @@ function Set-BranchProtection {
 # dev: PR obligatoria + CI en verde. Sin minimo de aprobaciones (revisor
 # unico == autor; GitHub no cuenta la propia aprobacion del autor como
 # revision, asi que exigir 1 bloquearia siempre al propio autor).
-Set-BranchProtection -Branch 'dev' -RequiredChecks @('validate', 'gitleaks') -RequiredApprovingReviews 0
-
 # main: igual, mas el gate que obliga a que la PR venga de dev/release/*.
-Set-BranchProtection -Branch 'main' -RequiredChecks @('validate', 'gitleaks', 'source-branch-gate') -RequiredApprovingReviews 0
+#
+# Envueltas en try/catch (a diferencia de la version original, que dejaba
+# que la excepcion de Set-BranchProtection abortara todo el script): en un
+# repo PRIVADO de plan Free, un 403 aqui es el resultado ESPERADO (ver
+# .SYNOPSIS), no un error real -- abortar el script entero le impedia
+# llegar al bloque de mas abajo que activa el guard local automaticamente,
+# precisamente la mitigacion pensada para este caso. En un repo PUBLICO, en
+# cambio, un fallo aqui SI es inesperado y se relanza (no se traga el
+# error).
+try {
+    Set-BranchProtection -Branch 'dev' -RequiredChecks @('validate', 'gitleaks') -RequiredApprovingReviews 0
+    Set-BranchProtection -Branch 'main' -RequiredChecks @('validate', 'gitleaks', 'source-branch-gate') -RequiredApprovingReviews 0
+}
+catch {
+    if ($repoVisibility -eq 'public') {
+        throw
+    }
+    Write-Host ""
+    Write-Host "Aviso: no se pudo aplicar branch protection completa (repo privado, bloqueo de plan esperado -- ver mensaje de arriba). Se continua para dejar activada al menos la mitigacion local." -ForegroundColor Yellow
+}
 
 # Deliberadamente NO se toca default_branch: debe seguir siendo 'main' (ver
 # IMPORTANTE en la cabecera del fichero) para que "Use this template" siga
 # copiando 'main' y no 'dev'.
 
 Write-Host "Comprobando visibilidad para el secret scanning nativo de GitHub..." -ForegroundColor Cyan
-$repoVisibility = gh api "repos/$Owner/$Repo" --jq '.visibility'
 if ($repoVisibility -eq 'public') {
     try {
         gh api "repos/$Owner/$Repo" -X PATCH `
