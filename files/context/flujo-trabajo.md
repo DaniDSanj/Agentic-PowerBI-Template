@@ -4,7 +4,9 @@ Este fichero es la pieza de enganche entre "qué hay que hacer en cada fase" (el
 
 ## 0. Bootstrap (una sola vez por proyecto)
 
-Si `.claude/project-config.json` no existe, el repo no ha sido inicializado todavía. Invoca el skill `requirements-intake` — su paso 0 pregunta explícitamente el escenario de licencia (ver `escenario-licencia.md`) y escribe `.claude/project-config.json` con `{"proyecto", "escenario": "A"|"B", "storageMode", "fechaBootstrap"}`. **Nunca asumas el escenario por el nombre del cliente o del repo.** El hook `session-start-check.ps1` te lo recordará al abrir sesión si falta ese fichero.
+Si `.claude/project-config.json` no existe, el repo no ha sido inicializado todavía. Invoca el skill `requirements-intake` — su paso 0 pregunta explícitamente el escenario de licencia (ver `escenario-licencia.md`) y la visibilidad del repo (pública/privada), y escribe `.claude/project-config.json` con `{"proyecto", "escenario": "A"|"B", "storageMode", "visibilidad": "publico"|"privado", "fechaBootstrap"}`. **Nunca asumas el escenario ni la visibilidad por el nombre del cliente o del repo.** El hook `session-start-check.ps1` te lo recordará al abrir sesión si falta ese fichero.
+
+Si `visibilidad` es `"privado"`, invoca también el skill `local-git-guard` en este mismo paso 0 — instala la capa de gobernanza local (`tools/git-hooks/`) que mitiga, dentro de sus límites documentados, la ausencia de branch protection y secret scanning nativo en un repo privado de GitHub Free (ver `files/context/control-versiones.md`, sección "Escenario privado (Free)").
 
 Todo lo que sigue lee ese fichero para decidir sus ramas condicionales A/B.
 
@@ -41,9 +43,11 @@ El hook `post-edit-pbir.ps1` (`PostToolUse` sobre `Edit`/`Write` matcheando `**/
 
 ## 5. Cierre de la unidad de trabajo: commit y PR
 
-Commit semántico (`feat(model): ...`, `fix(report): ...`) sobre la rama `feature/`/`fix/` activa, siguiendo `control-versiones.md`. El agente commitea y abre el PR **contra `dev`** de forma autónoma, sin pedir permiso en cada paso — **pero nunca hace merge de su propio PR ni push directo a `dev`/`main`/`release/*`**; `settings.json` lo refuerza técnicamente (deny explícito en `permissions`), no solo por instrucción, y la branch protection de GitHub (`tools/setup-github-repo.ps1`) lo refuerza además a nivel de plataforma. El merge queda siempre a criterio humano tras revisar el diff TMDL/PBIR.
+Commit semántico (`feat(model): ...`, `fix(report): ...`) sobre la rama `feature/`/`fix/` activa, siguiendo `control-versiones.md`. El agente commitea y abre el PR **contra `dev`** de forma autónoma, sin pedir permiso en cada paso — **pero nunca hace merge de su propio PR ni push directo a `dev`/`main`/`release/*`**; `settings.json` lo refuerza técnicamente (deny explícito en `permissions`), no solo por instrucción, y la branch protection de GitHub (`tools/setup-github.ps1`) lo refuerza además a nivel de plataforma. El merge queda siempre a criterio humano tras revisar el diff TMDL/PBIR.
 
 La promoción `dev → main` es una PR separada y explícita (no ocurre en cada cierre de unidad de trabajo) — el job `source-branch-gate` de CI bloquea cualquier PR contra `main` que no venga de `dev` o `release/*`.
+
+En un repo `visibilidad: "privado"`, invoca periódicamente (no en cada cierre) el skill `audit-history` — detecta a posteriori merges sin PR asociada o con CI en rojo, el único hueco que `tools/git-hooks/` no puede prevenir (ver `control-versiones.md`).
 
 El hook `post-commit-docs.ps1` (`PostToolUse` sobre `Bash` matcheando `git commit`) invoca al subagente `docs-writer`, que regenera data dictionary, linaje de medidas y README de consumidor en `docs/` a partir de TMDL/DMVs — no bloquea el commit, corre después. Si prefieres regenerarla fuera de ese momento, el skill `docs-sync` hace lo mismo bajo demanda.
 
@@ -53,6 +57,7 @@ El hook `post-commit-docs.ps1` (`PostToolUse` sobre `Bash` matcheando `git commi
 
 - `tools/ci/validate-bpa.ps1` — repite la invocación TE2 confirmada de `post-edit-tmdl.ps1` (`TabularEditor.exe "<Proyecto>.SemanticModel\definition" -A tools\BPARules.json -V`, vía `System.Diagnostics.Process` con redirección explícita — `& $teExe ... 2>&1` no captura salida/exit-code de forma fiable ni siquiera fuera del contexto de hooks, reconfirmado en runner real) sobre **todos** los `*.SemanticModel` del repo, y falla el job (`exit 1`) si hay líneas `##vso[task.logissue type=error;]`.
 - `tools/ci/validate-pbir-schema.ps1` — repite la comprobación superficial de `post-edit-pbir.ps1` (JSON válido + array `required` de nivel superior del `$schema` declarado) mas no una validación completa de JSON Schema, solo sobre los ficheros PBIR tocados en el diff del PR (`git diff --name-only <base>...HEAD`).
+- `tools/ci/validate-docs-freshness.ps1` — contraparte de servidor del hook local `post-commit-docs.ps1`, pero verificando de verdad en vez de solo recordar: si el diff del PR toca modelo/informe (`*.tmdl`, `definition/pages/**`) exige que también toque `docs/data-dictionary.md`, `docs/linaje-medidas.md`, `docs/README-consumidor.md` o `docs/adr/**`; si toca mecanismo de la plantilla (`files/context/**`, `.claude/**`, `tools/**`, `CLAUDE.md`, `README.md`, `.github/workflows/**`) exige que también toque `docs/CHANGELOG.md` o `docs/decisiones/**`. Falla el job (`exit 1`) si falta la actualización correspondiente; no falla si el repo no tiene ningún `*.SemanticModel` (la primera condición simplemente no llega a aplicar). **Añadido en esta revisión (2026-09) y confirmado en CI real**: verificado primero localmente contra dos ramas de prueba (falla si el diff toca `.claude/` sin tocar `docs/`, pasa si los toca a la vez), y después con el job `validate-docs-freshness` corriendo en verde dentro de un PR real de GitHub Actions (`Agentic-PowerBI-Template` PR #10). Ver `docs/CHANGELOG.md`.
 
 El workflow tiene además dos jobs de seguridad (`gitleaks`, `source-branch-gate`) que no dependen de TE2 ni de PBIR — detalle completo en `control-versiones.md`.
 

@@ -1,0 +1,12 @@
+#!/bin/sh
+# Shim POSIX -- ver tools/git-hooks/pre-commit para la explicacion completa
+# del mecanismo. git pasa por stdin, a un hook pre-push, la lista de refs
+# que se van a empujar -- ese stdin hay que reenviarlo tal cual al script
+# real (pre-push.ps1 lo lee de [Console]::In), no perderlo en el shim.
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if command -v pwsh >/dev/null 2>&1; then
+    pwsh -NoProfile -ExecutionPolicy Bypass -File "$HOOK_DIR/pre-push.ps1"
+else
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOOK_DIR/pre-push.ps1"
+fi
