@@ -17,7 +17,7 @@ name: Validate PR
 # - gitleaks: escaner de secretos, bloqueante, sobre el diff de la PR.
 # - source-branch-gate: solo corre contra main; falla si la PR no viene de
 #   dev o release/*. Ambos deben marcarse como required status checks en la
-#   proteccion de rama (tools/setup-github-repo.ps1 los referencia por
+#   proteccion de rama (tools/setup-github.ps1 los referencia por
 #   nombre de job).
 # - validate-docs-freshness: falla si el PR toca modelo/informe o el
 #   mecanismo de la plantilla sin tocar la documentacion correspondiente en

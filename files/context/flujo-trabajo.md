@@ -4,7 +4,9 @@ Este fichero es la pieza de enganche entre "qué hay que hacer en cada fase" (el
 
 ## 0. Bootstrap (una sola vez por proyecto)
 
-Si `.claude/project-config.json` no existe, el repo no ha sido inicializado todavía. Invoca el skill `requirements-intake` — su paso 0 pregunta explícitamente el escenario de licencia (ver `escenario-licencia.md`) y escribe `.claude/project-config.json` con `{"proyecto", "escenario": "A"|"B", "storageMode", "fechaBootstrap"}`. **Nunca asumas el escenario por el nombre del cliente o del repo.** El hook `session-start-check.ps1` te lo recordará al abrir sesión si falta ese fichero.
+Si `.claude/project-config.json` no existe, el repo no ha sido inicializado todavía. Invoca el skill `requirements-intake` — su paso 0 pregunta explícitamente el escenario de licencia (ver `escenario-licencia.md`) y la visibilidad del repo (pública/privada), y escribe `.claude/project-config.json` con `{"proyecto", "escenario": "A"|"B", "storageMode", "visibilidad": "publico"|"privado", "fechaBootstrap"}`. **Nunca asumas el escenario ni la visibilidad por el nombre del cliente o del repo.** El hook `session-start-check.ps1` te lo recordará al abrir sesión si falta ese fichero.
+
+Si `visibilidad` es `"privado"`, invoca también el skill `local-git-guard` en este mismo paso 0 — instala la capa de gobernanza local (`tools/git-hooks/`) que mitiga, dentro de sus límites documentados, la ausencia de branch protection y secret scanning nativo en un repo privado de GitHub Free (ver `files/context/control-versiones.md`, sección "Escenario privado (Free)").
 
 Todo lo que sigue lee ese fichero para decidir sus ramas condicionales A/B.
 
@@ -41,9 +43,11 @@ El hook `post-edit-pbir.ps1` (`PostToolUse` sobre `Edit`/`Write` matcheando `**/
 
 ## 5. Cierre de la unidad de trabajo: commit y PR
 
-Commit semántico (`feat(model): ...`, `fix(report): ...`) sobre la rama `feature/`/`fix/` activa, siguiendo `control-versiones.md`. El agente commitea y abre el PR **contra `dev`** de forma autónoma, sin pedir permiso en cada paso — **pero nunca hace merge de su propio PR ni push directo a `dev`/`main`/`release/*`**; `settings.json` lo refuerza técnicamente (deny explícito en `permissions`), no solo por instrucción, y la branch protection de GitHub (`tools/setup-github-repo.ps1`) lo refuerza además a nivel de plataforma. El merge queda siempre a criterio humano tras revisar el diff TMDL/PBIR.
+Commit semántico (`feat(model): ...`, `fix(report): ...`) sobre la rama `feature/`/`fix/` activa, siguiendo `control-versiones.md`. El agente commitea y abre el PR **contra `dev`** de forma autónoma, sin pedir permiso en cada paso — **pero nunca hace merge de su propio PR ni push directo a `dev`/`main`/`release/*`**; `settings.json` lo refuerza técnicamente (deny explícito en `permissions`), no solo por instrucción, y la branch protection de GitHub (`tools/setup-github.ps1`) lo refuerza además a nivel de plataforma. El merge queda siempre a criterio humano tras revisar el diff TMDL/PBIR.
 
 La promoción `dev → main` es una PR separada y explícita (no ocurre en cada cierre de unidad de trabajo) — el job `source-branch-gate` de CI bloquea cualquier PR contra `main` que no venga de `dev` o `release/*`.
+
+En un repo `visibilidad: "privado"`, invoca periódicamente (no en cada cierre) el skill `audit-history` — detecta a posteriori merges sin PR asociada o con CI en rojo, el único hueco que `tools/git-hooks/` no puede prevenir (ver `control-versiones.md`).
 
 El hook `post-commit-docs.ps1` (`PostToolUse` sobre `Bash` matcheando `git commit`) invoca al subagente `docs-writer`, que regenera data dictionary, linaje de medidas y README de consumidor en `docs/` a partir de TMDL/DMVs — no bloquea el commit, corre después. Si prefieres regenerarla fuera de ese momento, el skill `docs-sync` hace lo mismo bajo demanda.
 

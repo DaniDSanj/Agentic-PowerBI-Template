@@ -14,6 +14,8 @@ Una vez este esqueleto se inicialice sobre un proyecto Power BI real, la estruct
 ├─ tools/
 │  ├─ BPARules.json         # reglas Best Practice Analyzer de la comunidad
 │  ├─ deploy.ps1            # FabricPS-PBIP / fabric-cicd
+│  ├─ setup-github.ps1      # crea/configura el repo en GitHub (branch protection, secret scanning) y/o el guard local (-LocalGuardOnly)
+│  ├─ git-hooks/            # hooks nativos (pre-commit, pre-push) — solo se activan con 'setup-github.ps1 -LocalGuardOnly', ver control-versiones.md
 │  └─ tests/                # notebooks sempy con aserciones DAX (solo Escenario B)
 ├─ docs/                    # vault Obsidian-friendly: data dictionary, linaje de medidas, README de consumidor, adr/
 │  └─ adr/                  # decisiones de arquitectura del modelo/informe (NNNN-titulo.md)
@@ -44,4 +46,6 @@ La última entrada cubre el caso de abrir `docs/` como vault de Obsidian localme
 *.pbir text eol=lf
 *.abf binary
 *.pbix binary
+tools/git-hooks/* text eol=lf
 ```
+La última línea es necesaria para que `tools/git-hooks/pre-commit`/`pre-push` (shims POSIX con shebang `#!/bin/sh`) no se corrompan con CRLF en un clon con `core.autocrlf=true` en Windows — un shebang con `\r` al final no lo reconoce `sh`.

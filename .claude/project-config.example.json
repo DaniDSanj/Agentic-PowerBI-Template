@@ -2,5 +2,6 @@
   "proyecto": "",
   "escenario": "A|B",
   "storageMode": "Import|DirectQuery|DirectLake",
+  "visibilidad": "publico|privado",
   "fechaBootstrap": "YYYY-MM-DD"
 }

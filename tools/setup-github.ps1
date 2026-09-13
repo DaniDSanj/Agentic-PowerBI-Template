@@ -1,9 +1,11 @@
 <#
 .SYNOPSIS
-    Configura por completo la parte de GitHub de un repo (esta plantilla, o
-    un repo cliente creado a partir de ella): opcionalmente crea el repo
-    desde la plantilla, crea/protege dev+main, y activa secret scanning
-    nativo si el repo es publico.
+    Script unico de gobernanza de repo: configura la parte de GitHub (esta
+    plantilla, o un repo cliente creado a partir de ella) -- opcionalmente
+    crea el repo desde la plantilla, crea/protege dev+main, activa secret
+    scanning nativo si es publico -- y/o activa la capa de gobernanza local
+    (tools/git-hooks/) para quien no necesita (o no puede) tocar la parte de
+    GitHub.
 
 .DESCRIPTION
     GitHub NO copia branch protection ni ninguna otra configuracion del repo
@@ -15,22 +17,47 @@
     no opcional. Es idempotente -- puede volver a ejecutarse sin efectos
     distintos de "queda igual".
 
-    Dos modos, segun se pase -ClientName o no:
+    Antes eran dos scripts separados (`setup-github-repo.ps1` +
+    `setup-local-git-guard.ps1`); se fusionaron en este a peticion del
+    usuario para tener un unico punto de entrada. La fusion no es un simple
+    pegado: la parte de GitHub requiere `gh` autenticado con permisos de
+    ADMINISTRADOR del repo (crear/proteger ramas), mientras que la parte del
+    guard local (`core.hooksPath`) no toca la API de GitHub en absoluto y la
+    puede ejecutar cualquiera. Dos casos reales donde esa diferencia importa:
+    un colaborador con acceso "Write" pero no "Admin" en el repo cliente
+    (minimo privilegio, no todo el mundo que commitea deberia poder tocar
+    branch protection), o el propio administrador autenticado en `gh` con un
+    token de alcance reducido (fine-grained PAT sin el permiso
+    `administration`) por politica de seguridad corporativa. Por eso existe
+    el modo `-LocalGuardOnly` (ver mas abajo): quien este en cualquiera de
+    esos casos puede activar su guard local sin necesitar en absoluto
+    permisos de administrador ni siquiera tener `gh` instalado.
+
+    Tres modos, mutuamente excluyentes:
 
     - Con -ClientName: crea el repo nuevo desde esta plantilla (autodetecta
       de que plantilla, leyendo el remoto 'origin' del directorio actual --
       hay que ejecutar este modo desde un clon local de la plantilla, nunca
       desde un repo cliente ya creado), lo clona, y aplica todo lo de abajo
-      dentro de el.
-    - Sin -ClientName: actua sobre el repo del directorio actual (autodetecta
-      Owner/Repo de su remoto 'origin') -- para aplicar/reaplicar esto sobre
-      un repo que ya existe (la propia plantilla, o un repo cliente ya
-      clonado).
+      dentro de el. Si el repo resulta privado, activa ademas
+      automaticamente el guard local en ese mismo clon (ver mas abajo).
+    - Sin -ClientName ni -LocalGuardOnly: actua sobre el repo del directorio
+      actual (autodetecta Owner/Repo de su remoto 'origin') -- para
+      aplicar/reaplicar esto sobre un repo que ya existe (la propia
+      plantilla, o un repo cliente ya clonado). Igual que el modo anterior,
+      si el repo es privado activa tambien el guard local automaticamente.
+    - Con -LocalGuardOnly [-RepoRoot <ruta>]: NO llama a `gh` en absoluto ni
+      lo requiere instalado. Solo activa `core.hooksPath` -> `tools/git-hooks`
+      en el clon indicado (por defecto, el directorio actual) y comprueba
+      que `gitleaks`/Tabular Editor 2 esten disponibles. Pensado para
+      cualquier persona que solo necesita que los hooks nativos de ese clon
+      se disparen, sin tocar la configuracion de GitHub.
 
-    Alcance deliberado (acordado explicitamente): este script solo toca
-    configuracion de GitHub. NO instala nada en el equipo local (Tabular
-    Editor 2, DAX Studio, gitleaks) -- esos pasos quedan impresos al final
-    como pendientes manuales, ver files/context/limites-duros.md.
+    Alcance deliberado (acordado explicitamente) de los modos que tocan
+    GitHub: solo configuran GitHub y el guard local de ese mismo clon. NO
+    instalan nada en el equipo (Tabular Editor 2, DAX Studio, gitleaks) --
+    esos pasos quedan impresos al final como pendientes manuales, ver
+    files/context/limites-duros.md.
 
     Modelo de ramas (ver files/context/control-versiones.md):
     - dev: rama de integracion. Todo feature/fix pasa por PR contra dev,
@@ -72,6 +99,7 @@
     Si se pasa, activa el modo "crear repo nuevo". Admite "Nombre" (se crea
     bajo la cuenta autenticada de gh) o "Owner/Nombre" (se crea bajo esa
     cuenta/organizacion) -- gh repo create interpreta ambos formatos.
+    Incompatible con -LocalGuardOnly.
 
 .PARAMETER Visibility
     'Public' (por defecto) o 'Private'. Solo se usa si se pasa -ClientName
@@ -79,26 +107,132 @@
     branch protection puede fallar con 403 en plan Free -- el script lo
     explica y para, no lo oculta.
 
+.PARAMETER LocalGuardOnly
+    Si se pasa, se salta por completo la parte de GitHub (no requiere `gh`
+    instalado ni autenticado) y solo activa la capa de gobernanza local
+    (`core.hooksPath` -> `tools/git-hooks`) en -RepoRoot. Incompatible con
+    -ClientName/-Visibility.
+
+.PARAMETER RepoRoot
+    Solo con -LocalGuardOnly: raiz del clon donde activar el guard local.
+    Por defecto, el directorio de trabajo actual.
+
 .EXAMPLE
     # Repo cliente nuevo, publico, bajo la cuenta autenticada:
-    pwsh -File tools/setup-github-repo.ps1 -ClientName Informe-ClienteX
+    pwsh -File tools/setup-github.ps1 -ClientName Informe-ClienteX
 
 .EXAMPLE
     # Repo cliente nuevo, privado, bajo una organizacion:
-    pwsh -File tools/setup-github-repo.ps1 -ClientName MiOrg/Informe-ClienteX -Visibility Private
+    pwsh -File tools/setup-github.ps1 -ClientName MiOrg/Informe-ClienteX -Visibility Private
 
 .EXAMPLE
     # Reaplicar sobre el repo del directorio actual (esta plantilla, o un cliente ya creado):
-    pwsh -File tools/setup-github-repo.ps1
+    pwsh -File tools/setup-github.ps1
+
+.EXAMPLE
+    # Solo activar el guard local en este clon, sin tocar GitHub (no requiere permisos de administrador):
+    pwsh -File tools/setup-github.ps1 -LocalGuardOnly
 #>
 [CmdletBinding()]
 param(
     [string]$ClientName,
     [ValidateSet('Public', 'Private')]
-    [string]$Visibility = 'Public'
+    [string]$Visibility = 'Public',
+    [switch]$LocalGuardOnly,
+    [string]$RepoRoot = (Get-Location).Path
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ($LocalGuardOnly -and ($ClientName -or $PSBoundParameters.ContainsKey('Visibility'))) {
+    throw "-LocalGuardOnly es incompatible con -ClientName/-Visibility -- son modos mutuamente excluyentes (ver .SYNOPSIS). Ejecuta el script solo con -LocalGuardOnly [-RepoRoot <ruta>], sin los otros parametros."
+}
+
+function Set-LocalGitGuard {
+    <#
+    Antes era tools/setup-local-git-guard.ps1 (fusionado aqui). Activa
+    'core.hooksPath' -> 'tools/git-hooks' en -RepoRoot y comprueba que la
+    toolchain que esos hooks necesitan (gitleaks, Tabular Editor 2) esta
+    disponible. No toca la API de GitHub en absoluto -- puede ejecutarla
+    cualquiera, sin permisos de administrador del repo ni `gh` instalado.
+    Idempotente.
+    #>
+    param([string]$RepoRoot)
+
+    if (-not (Test-Path (Join-Path $RepoRoot '.git'))) {
+        throw "No se encontro '.git' bajo '$RepoRoot' -- ejecuta esto desde la raiz de un clon real, no de un checkout parcial."
+    }
+
+    Push-Location $RepoRoot
+    try {
+        git config core.hooksPath tools/git-hooks
+        Write-Host "OK: core.hooksPath -> tools/git-hooks" -ForegroundColor Green
+
+        foreach ($hook in @('pre-commit', 'pre-push')) {
+            $hookPath = Join-Path $RepoRoot "tools\git-hooks\$hook"
+            if (-not (Test-Path $hookPath)) {
+                Write-Host "Aviso: no se encontro '$hookPath' -- el hook '$hook' no se ejecutara aunque core.hooksPath este configurado." -ForegroundColor Yellow
+                continue
+            }
+            # El bit ejecutable no importa en Windows, pero si en macOS/Linux/WSL.
+            if ($IsLinux -or $IsMacOS) {
+                & chmod +x $hookPath
+            }
+        }
+
+        Write-Host ""
+        Write-Host "Comprobando herramientas que estos hooks necesitan..." -ForegroundColor Cyan
+
+        $gitleaks = Get-Command gitleaks -ErrorAction SilentlyContinue
+        if ($gitleaks) {
+            Write-Host "OK: gitleaks encontrado ($($gitleaks.Source))." -ForegroundColor Green
+        }
+        else {
+            Write-Host "Aviso: 'gitleaks' no esta en el PATH. Instalalo (https://github.com/gitleaks/gitleaks) -- en un repo marcado 'visibilidad: privado', el hook pre-commit bloqueara todos los commits hasta que este instalado (fail-closed deliberado, ver tools/git-hooks/pre-commit.ps1)." -ForegroundColor Yellow
+        }
+
+        $teExe = $env:TABULAR_EDITOR_PATH
+        if ((-not $teExe -or -not (Test-Path $teExe)) -and (Get-Command TabularEditor.exe -ErrorAction SilentlyContinue)) {
+            $teExe = (Get-Command TabularEditor.exe).Source
+        }
+        if ($teExe -and (Test-Path $teExe)) {
+            Write-Host "OK: Tabular Editor 2 encontrado ($teExe)." -ForegroundColor Green
+        }
+        else {
+            Write-Host "Aviso: Tabular Editor 2 no localizable (TABULAR_EDITOR_PATH/PATH). El hook pre-push omitira la comprobacion BPA local sin bloquear el push -- CI sigue siendo la capa autoritativa para eso." -ForegroundColor Yellow
+        }
+
+        $configPath = Join-Path $RepoRoot '.claude\project-config.json'
+        if (Test-Path $configPath) {
+            try {
+                $config = Get-Content -Raw -Path $configPath | ConvertFrom-Json
+                if (-not $config.visibilidad) {
+                    Write-Host "Aviso: '.claude/project-config.json' no tiene el campo 'visibilidad' -- los hooks lo tratan como 'publico' (warn-only en secretos) hasta que se rellene. Invoca 'requirements-intake' para completarlo." -ForegroundColor Yellow
+                }
+                else {
+                    Write-Host "Visibilidad configurada: '$($config.visibilidad)'." -ForegroundColor Cyan
+                }
+            }
+            catch {
+                Write-Host "Aviso: no se pudo leer '.claude/project-config.json' ($($_.Exception.Message))." -ForegroundColor Yellow
+            }
+        }
+        else {
+            Write-Host "Aviso: '.claude/project-config.json' no existe todavia (repo sin bootstrap) -- los hooks tratan esto como 'publico' hasta que exista." -ForegroundColor Yellow
+        }
+
+        Write-Host ""
+        Write-Host "Listo. Verifica con: git config --get core.hooksPath" -ForegroundColor Cyan
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+if ($LocalGuardOnly) {
+    Set-LocalGitGuard -RepoRoot $RepoRoot
+    exit 0
+}
 
 function Get-OriginOwnerRepo {
     $url = git remote get-url origin 2>$null
@@ -228,7 +362,7 @@ function Set-BranchProtection {
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host ($output | Out-String) -ForegroundColor Red
-        throw "No se pudo aplicar branch protection sobre '$Branch' (gh api devolvio exit code $LASTEXITCODE). Si el mensaje menciona 'Upgrade to GitHub Pro or make this repository public', es un bloqueo real de plan de GitHub: la branch protection (clasica y rulesets) requiere GitHub Pro o repo publico en repos privados de plan Free. No hay workaround gratuito por API -- decide con el usuario si se hace publico el repo, se pasa a GitHub Pro, o se acepta un enforcement solo por convencion (hooks + CI gate, sin bloqueo real de push/merge a nivel de GitHub)."
+        throw "No se pudo aplicar branch protection sobre '$Branch' (gh api devolvio exit code $LASTEXITCODE). Si el mensaje menciona 'Upgrade to GitHub Pro or make this repository public', es un bloqueo real de plan de GitHub: la branch protection (clasica y rulesets) requiere GitHub Pro o repo publico en repos privados de plan Free. No hay workaround gratuito por API -- decide con el usuario si se hace publico el repo, se pasa a GitHub Pro, o se acepta la mitigacion local documentada en files/context/control-versiones.md ('Escenario privado (Free) -- capa de gobernanza local': tools/git-hooks/ + 'tools/setup-github.ps1 -LocalGuardOnly'), que ata a cualquiera que use un clon con el guard instalado pero NUNCA puede impedir un merge hecho desde la propia UI web de GitHub."
     }
 
     Write-Host "OK: '$Branch' protegida." -ForegroundColor Green
@@ -263,6 +397,29 @@ else {
     Write-Host "Repo privado: no se activa secret scanning nativo (requiere GitHub Advanced Security, de pago, en repos privados). La capa autoritativa sigue siendo el job 'gitleaks' de CI + el hook local best-effort." -ForegroundColor Yellow
 }
 
+# Registra la visibilidad real en project-config.json, si ya existe (repo
+# con bootstrap ya hecho). Si no existe todavia, requirements-intake la
+# preguntara/escribira en su paso 0 -- no se crea el fichero aqui.
+$projectConfigPath = Join-Path (Get-Location).Path '.claude\project-config.json'
+if (Test-Path $projectConfigPath) {
+    try {
+        $projectConfig = Get-Content -Raw -Path $projectConfigPath | ConvertFrom-Json
+        $nuevaVisibilidad = if ($repoVisibility -eq 'public') { 'publico' } else { 'privado' }
+        $projectConfig | Add-Member -NotePropertyName 'visibilidad' -NotePropertyValue $nuevaVisibilidad -Force
+        $projectConfig | ConvertTo-Json -Depth 10 | Set-Content -Path $projectConfigPath -Encoding utf8
+        Write-Host "OK: '.claude/project-config.json'.visibilidad = '$nuevaVisibilidad' (segun la visibilidad real del repo en GitHub)." -ForegroundColor Green
+    }
+    catch {
+        Write-Host "Aviso: no se pudo actualizar 'visibilidad' en '.claude/project-config.json' ($($_.Exception.Message)). Rellenalo a mano o via requirements-intake." -ForegroundColor Yellow
+    }
+}
+
+if ($repoVisibility -ne 'public') {
+    Write-Host ""
+    Write-Host "Repo privado: activando automaticamente el guard local en ESTE clon (mitigacion de no tener branch protection/secret scanning nativos)..." -ForegroundColor Yellow
+    Set-LocalGitGuard -RepoRoot (Get-Location).Path
+}
+
 Write-Host ""
 Write-Host "Listo. Verifica con:" -ForegroundColor Cyan
 Write-Host "  gh api repos/$Owner/$Repo/branches/main/protection"
@@ -272,3 +429,6 @@ Write-Host "Pendiente -- pasos manuales que este script NO automatiza (ver files
 Write-Host "  1. Abre este repo con Claude Code desde su propia carpeta (no desde otra sesion)."
 Write-Host "  2. Instala la toolchain local: Power BI Desktop, Tabular Editor 2 (>= 2.20.0), DAX Studio, y gitleaks si quieres que el hook local de secretos bloquee de verdad."
 Write-Host "  3. Invoca (o deja que se dispare) el skill 'requirements-intake' para el bootstrap del proyecto."
+if ($repoVisibility -ne 'public') {
+    Write-Host "  4. Repo privado: el guard local YA se ha activado aqui mismo (arriba). Cualquier OTRO clon de este repo (otra maquina, u otra persona sin permisos de administrador del repo) debe ejecutar 'pwsh -File tools/setup-github.ps1 -LocalGuardOnly' por su cuenta -- no viaja con el repo. Ver files/context/control-versiones.md, seccion 'Escenario privado (Free)'." -ForegroundColor Yellow
+}
