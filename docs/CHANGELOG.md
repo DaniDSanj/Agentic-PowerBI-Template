@@ -9,6 +9,14 @@ Registro cronológico (más reciente arriba) de cambios reales al **mecanismo** 
 
 Generado y mantenido por el subagente `docs-writer` (modo plantilla) — ver `.claude/agents/docs-writer.md`. Es acumulativo: cada regeneración añade una entrada nueva aquí arriba, nunca sobrescribe las anteriores.
 
+## 2026-09-13 — `tools/install-tools.ps1`: instalación de toolchain separada de `setup-github.ps1`
+
+Surgió al crear el repo sandbox de dogfooding (`Agentic-PowerBI-Sandbox`): `tools/setup-github.ps1` deja como pendiente manual instalar `gitleaks`/Tabular Editor 2/DAX Studio (solo los detecta y avisa si faltan, nunca los instala — alcance deliberado ya documentado en la cabecera de ese script). Se planteó fusionar la instalación dentro de `setup-github.ps1` para tener un único punto de entrada; se decidió **no** hacerlo y crear en su lugar `tools/install-tools.ps1`, separado.
+
+Razón de la separación: son dos ejes ortogonales con ciclo de vida distinto. `setup-github.ps1` configura *un repo* (API de GitHub + `core.hooksPath` de ese clon) — se repite una vez por repo cliente. `install-tools.ps1` configura *la máquina* (instala vía `winget`) — una vez por equipo, sin importar cuántos repos cliente se trabajen después desde ahí. Fusionarlos acoplaría ambos ciclos y automatizaría sin pedirlo explícitamente la instalación de binarios de terceros (mayor blast radius que escribir en la API de GitHub o en `.git/config`), en tensión con el límite de no introducir herramientas sin autorización explícita (`files/context/limites-duros.md`).
+
+`install-tools.ps1` es idempotente (comprueba antes de instalar) y admite `-SkipGitleaks`/`-SkipTabularEditor`/`-SkipDaxStudio` para quien ya tenga alguna herramienta por otra vía. Power BI Desktop y Python/`semantic-link-labs` (Escenario B) quedan fuera a propósito — no tienen (el primero) o no forman parte de la toolchain base de Escenario A (el segundo). **Diseño, pendiente de su propio dogfooding real** — los IDs de winget usados (`Gitleaks.Gitleaks`, `TabularEditor.TabularEditor.2`, `DaxStudio.DaxStudio`) no se han confirmado ejecutando el script en una máquina limpia, mismo criterio de honestidad que el resto de esta plantilla.
+
 ## 2026-09-13 — `merge-audit`/`audit-history` confirmados en dogfooding real
 
 Se probó el subagente `merge-audit` de extremo a extremo contra un segundo repo privado de prueba real (`DaniDSanj/test-merge-audit-dogfood-20260913`, creado igual que el anterior vía `tools/setup-github.ps1 -ClientName ... -Visibility Private`): se abrió una PR (`#1`, `feature/red-ci-demo` → `dev`) con un patrón de secreto simulado a propósito para forzar el job `gitleaks` a rojo, y se mergeó manualmente desde la web de GitHub pese al CI en rojo — posible precisamente porque, al ser un repo privado en plan Free, la branch protection no pudo aplicarse (403 ya confirmado) y el botón "Merge" no estaba bloqueado.
