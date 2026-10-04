@@ -9,6 +9,18 @@ Registro cronológico (más reciente arriba) de cambios reales al **mecanismo** 
 
 Generado y mantenido por el subagente `docs-writer` (modo plantilla) — ver `.claude/agents/docs-writer.md`. Es acumulativo: cada regeneración añade una entrada nueva aquí arriba, nunca sobrescribe las anteriores.
 
+## 2026-10-04 — Vendorizado de skills `powerbi-authoring` (v0.3.18), Fase 1 del plan de integración
+
+Se copian **sin editar** a `.claude/` los skills `powerbi-report-cli` y `semantic-model-authoring` y la carpeta `common/` de `microsoft/skills-for-fabric` (tag `v0.3.18`, commit `6c11ad5`, MIT), fuente `plugins/powerbi-authoring/`, sin los `apm.yml`. Decisión del plan (`docs/plan-integracion-skills-fabric-p1.md`): vendorizar fijado en vez de instalar como plugin. Origen, versión, licencia (`.claude/skills/LICENSE-skills-for-fabric`) y procedimiento manual de actualización en `.claude/skills/UPSTREAM.md`. Verificado con `diff -r` contra upstream (idéntico) y sin `apm.yml` residuales.
+
+Nuevo `tools/ci/check-skill-links.ps1`: comprueba que los enlaces relativos de `.claude/**/*.md` resuelven. Ejecutado en local: 123 ficheros, 224 enlaces, todos resuelven (los `../../common/` upstream funcionan con el mapeo `common/` → `.claude/common/`); prueba negativa en copia temporal falla con exit 1 como debe.
+
+**No se ha cambiado comportamiento**: ningún SKILL.md de la plantilla, `settings.json`, `.mcp.json`, `install-tools.ps1` ni CI se tocó (Fases 2-4). Ojo: los dos skills nuevos ya son descubribles por el agente y sus descripciones son muy amplias; la regla de enrutado "entra por el skill de la plantilla" llega en la Fase 3.
+
+**Fase 0 (parcial)**: Node 24.19.0 y CLI `@microsoft/powerbi-report-authoring-cli@0.4.0` instalados por el usuario; `doctor` → `ok: true` (solo comprueba Node/ajv/metadatos). Versión a fijar en Fase 2: 0.4.0 (los skills exigen `>= 0.3.0-beta.0`).
+
+**Pendiente / no verificado**: compatibilidad real de 0.4.0 con los comandos documentados en v0.3.18; `/mcp` comprobado por el usuario: `microsoft-learn` NO se carga desde `.claude/.mcp.json` (hay que moverlo a la raíz en Fase 2); `check-skill-links.ps1` aún no está cableado en CI ni probado en un runner real. Detalle en `PENDIENTE-VERIFICACION-SANDBOX.md`.
+
 ## 2026-09-13 — Bug real corregido: condición de carrera en `setup-github.ps1 -ClientName` al clonar
 
 Al recrear el repo sandbox `Agentic-PowerBI-Sandbox` (tras promocionar `dev→main` con el contenido de `install-tools.ps1`), el clon local quedó completamente vacío (`git status` → "No commits yet") pese a que el script reportó éxito. Causa real: `gh repo clone` se ejecutó antes de que GitHub terminara de propagar el commit inicial de "Use this template" — clonar un repo remoto que técnicamente ya existe pero todavía no tiene contenido también sale con exit code 0, y el bucle de reintentos de entonces solo comprobaba ese exit code, no el contenido real del clon. Confirmado con `gh api repos/.../commits`: el commit real sí existía en el remoto segundos después.
