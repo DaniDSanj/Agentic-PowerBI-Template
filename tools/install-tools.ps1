@@ -1,9 +1,10 @@
 <#
 .SYNOPSIS
     Instala/verifica en ESTA MAQUINA la toolchain de terceros que la
-    plantilla asume disponible (gitleaks, Tabular Editor 2, DAX Studio),
-    via winget. Idempotente: si una herramienta ya esta instalada, no la
-    toca.
+    plantilla asume disponible (gitleaks, Tabular Editor 2, DAX Studio,
+    Node.js LTS y el CLI npm powerbi-report-author), via winget/npm.
+    Idempotente: si una herramienta ya esta instalada (y, en el caso del
+    CLI, en la version fijada), no la toca.
 
 .DESCRIPTION
     Deliberadamente SEPARADO de tools/setup-github.ps1, no fusionado en el.
@@ -25,7 +26,13 @@
     tambien queda fuera -- no forma parte de la toolchain base de Escenario
     A que cubre este script.
 
-    Diseno, no dogfoodeado todavia en una sesion real (mismo criterio de
+    Node.js LTS y el CLI @microsoft/powerbi-report-authoring-cli (version
+    fijada abajo en $PbiReportCliVersion, NO @latest) los necesitan los
+    skills vendorizados powerbi-authoring (ver .claude/skills/UPSTREAM.md,
+    Fase 2 del plan de integracion). El CLI es beta upstream: la version
+    fijada es la unica probada (solo --version y doctor).
+
+    Diseno, no dogfoodeado todavia en una sesion real ni en maquina limpia (mismo criterio de
     honestidad que el resto de la plantilla) -- verifica que los IDs de
     winget de abajo siguen resolviendo el paquete esperado en tu maquina
     antes de asumirlo; pueden cambiar de nombre entre versiones de winget o
@@ -40,6 +47,13 @@
 .PARAMETER SkipDaxStudio
     Omite la instalacion/comprobacion de DAX Studio.
 
+.PARAMETER SkipNode
+    Omite la instalacion/comprobacion de Node.js LTS (>= 20). Si lo omites,
+    tambien se omite el CLI powerbi-report-author, que depende de npm.
+
+.PARAMETER SkipPbiReportCli
+    Omite la instalacion/comprobacion del CLI powerbi-report-author.
+
 .EXAMPLE
     # Instala (o confirma) las tres herramientas:
     pwsh -File tools/install-tools.ps1
@@ -52,10 +66,17 @@
 param(
     [switch]$SkipGitleaks,
     [switch]$SkipTabularEditor,
-    [switch]$SkipDaxStudio
+    [switch]$SkipDaxStudio,
+    [switch]$SkipNode,
+    [switch]$SkipPbiReportCli
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Version fijada del CLI. Los skills upstream exigen >= 0.3.0-beta.0 y
+# recomiendan @latest; aqui se fija a la unica version comprobada.
+$PbiReportCliVersion = '0.4.0'
+$PbiReportCliPackage = '@microsoft/powerbi-report-authoring-cli'
 
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     throw "No se encuentra 'winget' en el PATH. Instala 'App Installer' desde Microsoft Store, o instala cada herramienta manualmente (ver README.md, punto 4)."
@@ -107,6 +128,49 @@ if ($SkipDaxStudio) {
 else {
     Install-ToolIfMissing -Name 'DAX Studio' -WingetId 'DaxStudio.DaxStudio' -DetectInstalled {
         [bool](Get-Command DaxStudio.exe -ErrorAction SilentlyContinue)
+    }
+}
+
+if ($SkipNode) {
+    Write-Host "Omitido: Node.js LTS y CLI powerbi-report-author (-SkipNode)." -ForegroundColor Yellow
+}
+else {
+    Install-ToolIfMissing -Name 'Node.js LTS' -WingetId 'OpenJS.NodeJS.LTS' -DetectInstalled {
+        $node = Get-Command node -ErrorAction SilentlyContinue
+        if (-not $node) { return $false }
+        $major = (& node -v) -replace '^v(\d+)\..*$', '$1'
+        return ([int]$major -ge 20)
+    }
+}
+
+if ($SkipNode -or $SkipPbiReportCli) {
+    if (-not $SkipNode) {
+        Write-Host "Omitido: CLI powerbi-report-author (-SkipPbiReportCli)." -ForegroundColor Yellow
+    }
+}
+elseif (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    Write-Host "Aviso: 'npm' no esta en el PATH (Node.js recien instalado o no instalado). Abre una terminal nueva y vuelve a ejecutar este script para instalar el CLI powerbi-report-author $PbiReportCliVersion." -ForegroundColor Yellow
+}
+else {
+    $installedVersion = $null
+    if (Get-Command powerbi-report-author -ErrorAction SilentlyContinue) {
+        $installedVersion = (& powerbi-report-author --version 2>$null | Select-Object -First 1)
+    }
+    if ($installedVersion -eq $PbiReportCliVersion) {
+        Write-Host "OK: powerbi-report-author $PbiReportCliVersion ya esta instalado -- no se toca." -ForegroundColor Green
+    }
+    else {
+        if ($installedVersion) {
+            Write-Host "powerbi-report-author $installedVersion instalado, version fijada $PbiReportCliVersion -- se reinstala la fijada." -ForegroundColor Yellow
+        }
+        Write-Host "Instalando $PbiReportCliPackage@$PbiReportCliVersion (npm, global)..." -ForegroundColor Cyan
+        npm install -g "$PbiReportCliPackage@$PbiReportCliVersion"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Aviso: 'npm install -g' devolvio exit code $LASTEXITCODE -- revisa el mensaje de npm de arriba." -ForegroundColor Yellow
+        }
+        else {
+            Write-Host "OK: CLI instalado. Comprueba con 'powerbi-report-author doctor' en una terminal nueva." -ForegroundColor Green
+        }
     }
 }
 

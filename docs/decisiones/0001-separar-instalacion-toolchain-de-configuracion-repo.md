@@ -28,3 +28,7 @@ Cubre `gitleaks`, Tabular Editor 2 y DAX Studio — la toolchain base de Escenar
 ## Estado
 
 Diseño, pendiente de su propio dogfooding real — los IDs de winget usados (`Gitleaks.Gitleaks`, `TabularEditor.TabularEditor.2`, `DaxStudio.DaxStudio`) no se han confirmado ejecutando el script en una máquina limpia. Ver `docs/CHANGELOG.md` (entrada del mismo día).
+
+## Adenda (2026-10-04) — alcance ampliado
+
+`install-tools.ps1` instala además **Node.js LTS** (`OpenJS.NodeJS.LTS`, >= 20) y el CLI npm `@microsoft/powerbi-report-authoring-cli` con **versión fijada** (`0.4.0`, no `@latest`), requeridos por los skills vendorizados `powerbi-authoring` (Fase 2 del plan de integración). Mismas reglas: detección previa, idempotente, `-SkipNode`/`-SkipPbiReportCli`. Sigue siendo diseño sin dogfooding en máquina limpia.
