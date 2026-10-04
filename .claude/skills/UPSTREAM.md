@@ -28,3 +28,9 @@ Excluidos: `apm.yml`, `.claude-plugin/`, `.github/`, `.mcp.json` del plugin. Los
 3. Copia sobre `.claude/` (sin `apm.yml`), actualiza esta tabla (versión, commit, fecha) y `LICENSE-skills-for-fabric` si cambió.
 4. Ejecuta `pwsh tools/ci/check-skill-links.ps1`; revisa también que los nombres de skill no choquen con los de la plantilla.
 5. Añade entrada a `docs/CHANGELOG.md`, abre PR contra `dev` y revisa el diff antes de mergear (merge siempre humano).
+
+## CLI npm asociado
+
+- Paquete: `@microsoft/powerbi-report-authoring-cli`. Los skills exigen `>= 0.3.0-beta.0` y recomiendan `@latest`.
+- Probado en esta plantilla: `0.4.0` (2026-10-04, solo `--version` y `doctor`; `scaffold`/`validate`/`preview` sin probar). Versión a fijar en Fase 2: `0.4.0`.
+

@@ -17,7 +17,9 @@ Nuevo `tools/ci/check-skill-links.ps1`: comprueba que los enlaces relativos de `
 
 **No se ha cambiado comportamiento**: ningún SKILL.md de la plantilla, `settings.json`, `.mcp.json`, `install-tools.ps1` ni CI se tocó (Fases 2-4). Ojo: los dos skills nuevos ya son descubribles por el agente y sus descripciones son muy amplias; la regla de enrutado "entra por el skill de la plantilla" llega en la Fase 3.
 
-**Pendiente / no verificado**: Fase 0 sin ejecutar (Node no instalado → `powerbi-report-author doctor` y versión exacta del CLI sin determinar; `/mcp` sin comprobar); `check-skill-links.ps1` aún no está cableado en CI ni probado en un runner real. Detalle en `PENDIENTE-VERIFICACION-SANDBOX.md`.
+**Fase 0 (parcial)**: Node 24.19.0 y CLI `@microsoft/powerbi-report-authoring-cli@0.4.0` instalados por el usuario; `doctor` → `ok: true` (solo comprueba Node/ajv/metadatos). Versión a fijar en Fase 2: 0.4.0 (los skills exigen `>= 0.3.0-beta.0`).
+
+**Pendiente / no verificado**: compatibilidad real de 0.4.0 con los comandos documentados en v0.3.18; `/mcp` sin comprobar; `check-skill-links.ps1` aún no está cableado en CI ni probado en un runner real. Detalle en `PENDIENTE-VERIFICACION-SANDBOX.md`.
 
 ## 2026-09-13 — Bug real corregido: condición de carrera en `setup-github.ps1 -ClientName` al clonar
 
