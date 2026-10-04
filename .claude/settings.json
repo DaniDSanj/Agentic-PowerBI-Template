@@ -66,10 +66,23 @@
       "Bash(pwsh -File*)",
       "Bash(pwsh -NoProfile -File*)",
       "Bash(powershell.exe -File*)",
-      "Bash(powershell.exe -NoProfile -File*)"
+      "Bash(powershell.exe -NoProfile -File*)",
+      "Bash(powerbi-report-author validate*)",
+      "Bash(powerbi-report-author catalog*)",
+      "Bash(powerbi-report-author formatting*)",
+      "Bash(powerbi-report-author preview-visuals*)",
+      "Bash(powerbi-report-author doctor*)",
+      "Bash(powerbi-report-author scaffold*)",
+      "Bash(powerbi-report-author expr encode*)",
+      "Bash(powerbi-report-author theme encode*)"
     ],
     "ask": [
-      "Bash(git push*)"
+      "Bash(git push*)",
+      "Bash(powerbi-report-author preview)",
+      "Bash(powerbi-report-author preview *)",
+      "Bash(powerbi-report-author pack*)",
+      "Bash(powerbi-report-author unpack*)",
+      "Bash(az rest*)"
     ],
     "deny": [
       "Bash(git push origin main*)",
