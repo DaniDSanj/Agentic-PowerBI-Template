@@ -55,3 +55,9 @@ Plan: `docs/plan-integracion-skills-fabric-p1.md`.
 - **Node ≥20**: `node`/`npm` no están instalados en la máquina de trabajo (ni en PATH ni en `C:\Program Files\nodejs`). Instalación global = paso manual (`winget install OpenJS.NodeJS.LTS`, terminal nueva); no la hizo el agente.
 - **`@microsoft/powerbi-report-authoring-cli` + `powerbi-report-author doctor`**: no ejecutado. Versión exacta que funcione: **sin determinar**.
 - **`microsoft-learn` desde `.claude/.mcp.json`**: sin verificar con `/mcp` (comando interactivo del usuario). Estático: existe `.claude/.mcp.json` y no existe `.mcp.json` en la raíz, que es donde Claude Code lo lee → probablemente no se carga.
+
+## Integración skills powerbi-authoring (Fase 1, 2026-10-04) — NO verificado
+
+- **`tools/ci/check-skill-links.ps1` en CI real**: solo ejecutado en local (224 enlaces OK, prueba negativa OK). No está cableado en `validate-pr.yml` (Fase 2+) ni probado en `windows-latest`.
+- **Skills vendorizados cargados por Claude Code**: sin comprobar en sesión real que `powerbi-report-cli` y `semantic-model-authoring` aparecen y se disparan; sus descripciones amplias pueden competir con los skills de la plantilla (regla de enrutado pendiente, Fase 3).
+- **Uso real del CLI** (`scaffold`, `validate`, `preview`) y de las guías upstream: sin probar (depende de Fase 0/Node).
