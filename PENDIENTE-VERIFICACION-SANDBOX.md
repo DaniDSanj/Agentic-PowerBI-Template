@@ -67,3 +67,11 @@ Plan: `docs/plan-integracion-skills-fabric-p1.md`.
 - **`tools/ci/check-skill-links.ps1` en CI real**: solo ejecutado en local (224 enlaces OK, prueba negativa OK). No está cableado en `validate-pr.yml` (Fase 2+) ni probado en `windows-latest`.
 - **Skills vendorizados cargados por Claude Code**: sin comprobar en sesión real que `powerbi-report-cli` y `semantic-model-authoring` aparecen y se disparan; sus descripciones amplias pueden competir con los skills de la plantilla (regla de enrutado pendiente, Fase 3).
 - **Uso real del CLI** (`scaffold`, `validate`, `preview`) y de las guías upstream: sin probar (depende de Fase 0/Node).
+
+## Integración skills powerbi-authoring (Fase 2, 2026-10-04) — NO verificado
+
+- **`.mcp.json` en la raíz carga**: `microsoft-learn` movido desde `.claude/.mcp.json` (corrige el hallazgo de Fase 0). Falta reiniciar Claude Code con este repo como directorio de trabajo, aprobar el servidor de proyecto y confirmar con `/mcp`.
+- **`powerbi-modeling-mcp` 1.0.0 conecta**: lanzado con `cmd /c npx -y @microsoft/powerbi-modeling-mcp@1.0.0 --start`. Sin probar ni el wrapper `cmd /c` ni la descarga del binario nativo. Sin verificar que sus tools coincidan con lo que citan los skills v0.3.18 (upstream usa `@latest`; antes de 1.0.0 solo había betas).
+- **`tools/install-tools.ps1` (Node LTS + CLI 0.4.0)**: solo parseado. Sin ejecutar en máquina limpia; ID winget `OpenJS.NodeJS.LTS` y la ruta "npm aún no en PATH" sin probar.
+- **Patrones de permisos**: `Bash(powerbi-report-author preview *)` (espacio) no debería casar `preview-visuals`; no probado en sesión. Comprobar con `/permissions` y ejecutando `preview-visuals` (sin prompt) y `preview` (con prompt). Subcomandos nuevos de 0.4.0 (`preview-pages`, `preview-filters`, `preview-themes`) caen en prompt por defecto.
+- **`scaffold`, `validate`, `preview`** siguen sin ejercitarse (solo `--help`).
