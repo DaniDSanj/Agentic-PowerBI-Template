@@ -19,7 +19,7 @@ Nuevo `tools/ci/check-skill-links.ps1`: comprueba que los enlaces relativos de `
 
 **Fase 0 (parcial)**: Node 24.19.0 y CLI `@microsoft/powerbi-report-authoring-cli@0.4.0` instalados por el usuario; `doctor` → `ok: true` (solo comprueba Node/ajv/metadatos). Versión a fijar en Fase 2: 0.4.0 (los skills exigen `>= 0.3.0-beta.0`).
 
-**Pendiente / no verificado**: compatibilidad real de 0.4.0 con los comandos documentados en v0.3.18; `/mcp` sin comprobar; `check-skill-links.ps1` aún no está cableado en CI ni probado en un runner real. Detalle en `PENDIENTE-VERIFICACION-SANDBOX.md`.
+**Pendiente / no verificado**: compatibilidad real de 0.4.0 con los comandos documentados en v0.3.18; `/mcp` comprobado por el usuario: `microsoft-learn` NO se carga desde `.claude/.mcp.json` (hay que moverlo a la raíz en Fase 2); `check-skill-links.ps1` aún no está cableado en CI ni probado en un runner real. Detalle en `PENDIENTE-VERIFICACION-SANDBOX.md`.
 
 ## 2026-09-13 — Bug real corregido: condición de carrera en `setup-github.ps1 -ClientName` al clonar
 

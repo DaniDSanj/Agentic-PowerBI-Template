@@ -48,7 +48,7 @@ Ver `docs/CHANGELOG.md` de `Agentic-PowerBI-Template` para el detalle de lo que 
 
 Capa de gobernanza local completa (`tools/git-hooks/`, `setup-github.ps1` con `-LocalGuardOnly` y modo GitHub, `merge-audit`/`audit-history`), `validate-docs-freshness.ps1` modo plantilla, hook `post-commit-docs.ps1` ampliado, `docs-writer` modo plantilla — todo esto quedó dogfoodeado de extremo a extremo en la sesión del PR #10, con hallazgos reales documentados en `docs/CHANGELOG.md` (incluye un bug real encontrado y corregido: el guard local no se activaba cuando branch protection fallaba en repo privado).
 
-## Integración skills powerbi-authoring (Fase 0, 2026-10-04) — parcialmente verificado
+## Integración skills powerbi-authoring (Fase 0, 2026-10-04) — parcialmente verificado (solo queda la compatibilidad 0.4.0 ↔ skills)
 
 Plan: `docs/plan-integracion-skills-fabric-p1.md`.
 
@@ -60,7 +60,7 @@ Plan: `docs/plan-integracion-skills-fabric-p1.md`.
 
 **No verificado:**
 - **Compatibilidad 0.4.0 ↔ skills v0.3.18**: los skills exigen `>= 0.3.0-beta.0` y recomiendan `@latest`; `0.4.0` lo cumple, pero no hay evidencia de que los comandos/flags documentados no hayan cambiado. `doctor` solo comprueba Node, ajv y el proveedor de metadatos; no ejerce `scaffold`/`validate`/`preview`.
-- **`microsoft-learn` desde `.claude/.mcp.json`**: sin verificar con `/mcp` (interactivo, del usuario). Estático: existe `.claude/.mcp.json` y no hay `.mcp.json` en la raíz, que es donde Claude Code lo lee → probablemente no se carga.
+- **`microsoft-learn` desde `.claude/.mcp.json`**: **VERIFICADO que NO se carga** — el usuario ejecutó `/mcp` (2026-10-04) en una sesión abierta en este repo y no aparece. Coincide con que Claude Code lee `.mcp.json` de la raíz y no existe. Corrección pendiente en Fase 2 (mover/duplicar a `.mcp.json` en la raíz).
 
 ## Integración skills powerbi-authoring (Fase 1, 2026-10-04) — NO verificado
 
