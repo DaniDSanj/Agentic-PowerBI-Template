@@ -53,11 +53,11 @@ Es un árbol **1:1 con lo que necesita cualquier repo cliente** — no hay ningu
 CLAUDE.md                                  # constitución del agente (raíz, siempre cargado)
 Investigacion_AgenticPowerBI_20260826.md   # fuente verificada que respalda CLAUDE.md y files/context/
 README.md
+.mcp.json                                  # servidores MCP de proyecto (microsoft-learn, powerbi-modeling-mcp); Claude Code lo lee solo desde la raíz
 files/
 └─ context/                                # convenciones por fase, referenciadas por CLAUDE.md via @import
 .claude/
 ├─ settings.json
-├─ .mcp.json
 ├─ project-config.example.json
 ├─ skills/                                 # un skill por fase del flujo (files/context/flujo-trabajo.md los enumera)
 ├─ agents/                                 # bpa-reviewer, pbir-schema-validator, docs-writer, data-profiler

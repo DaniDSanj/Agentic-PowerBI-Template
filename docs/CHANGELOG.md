@@ -9,6 +9,14 @@ Registro cronológico (más reciente arriba) de cambios reales al **mecanismo** 
 
 Generado y mantenido por el subagente `docs-writer` (modo plantilla) — ver `.claude/agents/docs-writer.md`. Es acumulativo: cada regeneración añade una entrada nueva aquí arriba, nunca sobrescribe las anteriores.
 
+## 2026-10-04 — Cableado de herramientas (Fase 2 del plan de integración de skills `powerbi-authoring`)
+
+- **MCP**: `.claude/.mcp.json` → `.mcp.json` en la raíz (`git mv`, sin dejar copia): Claude Code solo lee el MCP de proyecto de la raíz y `/mcp` confirmó que `microsoft-learn` no cargaba. Se añade `powerbi-modeling-mcp` en stdio con versión fijada **1.0.0** (única estable, dist-tag `latest` al 2026-09-25; el plugin upstream usa `@latest`). Desviaciones respecto al `.mcp.json` upstream: lanzado vía `cmd /c npx` (Windows nativo) y sin la clave `tools: ["*"]`. README: árbol corregido.
+- **`tools/install-tools.ps1`**: instala Node.js LTS (`OpenJS.NodeJS.LTS`, >= 20) y `@microsoft/powerbi-report-authoring-cli@0.4.0` (fijado, no `@latest`); detección previa, `-SkipNode`/`-SkipPbiReportCli`; si `npm` no está en el PATH tras instalar Node, avisa y pide terminal nueva. Adenda en ADR 0001. **El script no se ha ejecutado**, solo parseado.
+- **Permisos** (`.claude/settings.json`): `allow` para `validate`, `catalog`, `formatting`, `preview-visuals`, `doctor`, `scaffold`, `expr encode`, `theme encode`; `ask` para `preview`, `pack`, `unpack` y `az rest`. Los 8 subcomandos se comprobaron con `--help` en 0.4.0 (existen todos; 0.4.0 añade `preview-pages`, `preview-filters`, `preview-themes`, `text`, no incluidos en `allow`). Como `ask` gana a `allow`, `preview*` habría anulado `preview-visuals*`; se usa `preview ` con espacio (+ `preview` sin args). `deny` sin cambios.
+
+**Pendiente / no verificado**: que `.mcp.json` cargue tras reiniciar, que `powerbi-modeling-mcp` conecte (incl. `cmd /c`), compatibilidad de sus tools 1.0.0 con los skills v0.3.18, `install-tools` en máquina limpia y la semántica del patrón con espacio. Detalle en `PENDIENTE-VERIFICACION-SANDBOX.md`.
+
 ## 2026-10-04 — Vendorizado de skills `powerbi-authoring` (v0.3.18), Fase 1 del plan de integración
 
 Se copian **sin editar** a `.claude/` los skills `powerbi-report-cli` y `semantic-model-authoring` y la carpeta `common/` de `microsoft/skills-for-fabric` (tag `v0.3.18`, commit `6c11ad5`, MIT), fuente `plugins/powerbi-authoring/`, sin los `apm.yml`. Decisión del plan (`docs/plan-integracion-skills-fabric-p1.md`): vendorizar fijado en vez de instalar como plugin. Origen, versión, licencia (`.claude/skills/LICENSE-skills-for-fabric`) y procedimiento manual de actualización en `.claude/skills/UPSTREAM.md`. Verificado con `diff -r` contra upstream (idéntico) y sin `apm.yml` residuales.
