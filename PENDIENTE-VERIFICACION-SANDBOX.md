@@ -70,8 +70,8 @@ Plan: `docs/plan-integracion-skills-fabric-p1.md`.
 
 ## Integración skills powerbi-authoring (Fase 2, 2026-10-04) — NO verificado
 
-- **`.mcp.json` en la raíz carga**: `microsoft-learn` movido desde `.claude/.mcp.json` (corrige el hallazgo de Fase 0). Falta reiniciar Claude Code con este repo como directorio de trabajo, aprobar el servidor de proyecto y confirmar con `/mcp`.
-- **`powerbi-modeling-mcp` 1.0.0 conecta**: lanzado con `cmd /c npx -y @microsoft/powerbi-modeling-mcp@1.0.0 --start`. Sin probar ni el wrapper `cmd /c` ni la descarga del binario nativo. Sin verificar que sus tools coincidan con lo que citan los skills v0.3.18 (upstream usa `@latest`; antes de 1.0.0 solo había betas).
+- ✅ **VERIFICADO (usuario, Fase 3)** — **`.mcp.json` en la raíz carga**: `/mcp` muestra conectado `microsoft-learn` desde `.mcp.json` en la raíz (movido desde `.claude/.mcp.json`; corrige el hallazgo de Fase 0).
+- ✅ **VERIFICADO (usuario, Fase 3)** — **`powerbi-modeling-mcp` 1.0.0 conecta**: `/mcp` lo muestra conectado (`powerbi-modeling-mcp@1.0.0`), lo que cubre el wrapper `cmd /c npx` y la descarga del binario. **Sigue sin verificar** que sus tools coincidan con lo que citan los skills v0.3.18 (upstream usa `@latest`; antes de 1.0.0 solo había betas).
 - **`tools/install-tools.ps1` (Node LTS + CLI 0.4.0)**: solo parseado. Sin ejecutar en máquina limpia; ID winget `OpenJS.NodeJS.LTS` y la ruta "npm aún no en PATH" sin probar.
-- **Patrones de permisos**: `Bash(powerbi-report-author preview *)` (espacio) no debería casar `preview-visuals`; no probado en sesión. Comprobar con `/permissions` y ejecutando `preview-visuals` (sin prompt) y `preview` (con prompt). Subcomandos nuevos de 0.4.0 (`preview-pages`, `preview-filters`, `preview-themes`) caen en prompt por defecto.
+- ✅ **VERIFICADO (usuario, Fase 3)** — **Patrones de permisos**: validate/catalog/formatting/preview-visuals/doctor/scaffold/`expr encode`/`theme encode` en allow; `preview`, `pack`, `unpack` y `az rest` piden permiso; `preview-visuals` NO pide permiso (el patrón `preview *` con espacio no lo solapa). **Sin verificar**: subcomandos nuevos de 0.4.0 (`preview-pages`, `preview-filters`, `preview-themes`), que deberían caer en prompt por defecto.
 - **`scaffold`, `validate`, `preview`** siguen sin ejercitarse (solo `--help`).
