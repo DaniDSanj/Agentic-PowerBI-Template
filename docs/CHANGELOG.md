@@ -9,6 +9,18 @@ Registro cronológico (más reciente arriba) de cambios reales al **mecanismo** 
 
 Generado y mantenido por el subagente `docs-writer` (modo plantilla) — ver `.claude/agents/docs-writer.md`. Es acumulativo: cada regeneración añade una entrada nueva aquí arriba, nunca sobrescribe las anteriores.
 
+## 2026-10-05 — Envoltorios de skills (Fase 3 del plan de integración de skills `powerbi-authoring`)
+
+Los skills `diseno-informe`, `temas`, `visuales-pbir`, `modelo-tmdl`, `medidas-dax` y `pbip-scaffold` pasan a ser **envoltorios**: conservan sus reglas y añaden un bloque "Upstream" con enlaces relativos a ficheros concretos de `powerbi-report-cli` / `semantic-model-authoring` (sin copiar contenido, sin tocar lo vendorizado). `deploy` solo gana una nota: el despliegue por API no es idempotente (un reintento duplica el modelo). `CLAUDE.md` y `files/context/flujo-trabajo.md` ganan **solo** la línea de enrutado ("entra por el skill de la plantilla; él decide cuándo leer el upstream"); el resto de `files/context/` es Fase 4.
+
+**Reglas de arbitraje fijadas en los envoltorios** (donde upstream choca con la plantilla): TMDL en disco + hook BPA manda sobre el MCP (el upstream prohíbe leer/editar `.tmdl` con MCP conectado; aquí el MCP es para leer, DAX y refresco, y una escritura vía MCP exige `bpa-validate` manual declarado); planning parte de `requirements-intake` sin repetir preguntas; credenciales, `bindConnection`, `management` y *Deploy/Manage* vía `az rest` fuera del alcance del agente; escenario A/B; cabecera `x-ms-fabric-skill` solo si se llama a la API. Sin membresías RLS/OLS (coincide con el `DENY` upstream).
+
+**Decisiones tomadas con el usuario**: el spec de planning se persiste en `docs/brief/report-spec.md` (el upstream usa `_brief/`, ruta inexistente en la arquitectura; se formaliza en Fase 4); el gate de captura de authoring se acota a **`--host desktop` con permiso (`ask`)** y el host `service` queda fuera de alcance; sin Desktop la validación visual se declara "pendiente manual".
+
+**Hallazgo sobre `scaffold`** (0.4.0, `--help`): crea un `.pbip` + `.Report` completos y `--force` sobrescribe sin pedir permiso porque `scaffold*` está en `allow`. `pbip-scaffold` lo acota: solo con `.SemanticModel` ya existente (`--model-path`) y nunca `--force`. **Propuestas, no aplicadas** (restricción de la fase): `deny`/`ask` para `scaffold --force`; `deny` de `mcp__powerbi-modeling-mcp__accept_eula` y `ask` para las herramientas de escritura del MCP; y una línea en `limites-duros.md` ("el agente nunca acepta un EULA en nombre del usuario"). La nota EULA vive por ahora en `modelo-tmdl` y `medidas-dax`.
+
+**Pendiente / no verificado**: que los envoltorios enruten bien frente a las descripciones amplias upstream; que el agente no cargue todo el upstream (~1,3 MB); que el hook BPA siga disparándose con los envoltorios; que `powerbi-report-author validate` detecte IDs duplicados (solapamiento con `pbir-schema-validator`); compatibilidad 0.4.0 ↔ comandos de v0.3.18 y `scaffold` real; el flujo de capturas en Desktop. `check-skill-links.ps1` pasa en local (257 enlaces). Detalle en `PENDIENTE-VERIFICACION-SANDBOX.md`.
+
 ## 2026-10-04 — Cableado de herramientas (Fase 2 del plan de integración de skills `powerbi-authoring`)
 
 - **MCP**: `.claude/.mcp.json` → `.mcp.json` en la raíz (`git mv`, sin dejar copia): Claude Code solo lee el MCP de proyecto de la raíz y `/mcp` confirmó que `microsoft-learn` no cargaba. Se añade `powerbi-modeling-mcp` en stdio con versión fijada **1.0.0** (única estable, dist-tag `latest` al 2026-09-25; el plugin upstream usa `@latest`). Desviaciones respecto al `.mcp.json` upstream: lanzado vía `cmd /c npx` (Windows nativo) y sin la clave `tools: ["*"]`. README: árbol corregido.
