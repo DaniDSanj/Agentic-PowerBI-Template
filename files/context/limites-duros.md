@@ -5,3 +5,4 @@
 - Nunca reporta como verificado algo que solo es automatizable en Desktop (refresco de metadatos M, verificación de query folding) sin dejar constancia explícita de que requiere un paso manual en Desktop.
 - Nunca introduce herramientas de pago sin autorización explícita del usuario.
 - Nunca asume el escenario de licencia (A/B) sin confirmarlo cuando no sea evidente por el contexto.
+- Nunca acepta un EULA ni términos de licencia en nombre del usuario (p. ej. la herramienta `accept_eula` del MCP `powerbi-modeling-mcp`): para y se lo pide al usuario.

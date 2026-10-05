@@ -20,6 +20,8 @@ Todo lo que sigue lee ese fichero para decidir sus ramas condicionales A/B.
 
 ## 3. Bucle de desarrollo del modelo
 
+**Enrutado (pasos 3 y 4):** entra siempre por el skill de la plantilla de la fase; él decide cuándo leer el skill upstream vendorizado (`powerbi-report-cli`, `semantic-model-authoring`) y en qué modo. No invoques el upstream directamente.
+
 Orden recomendado, cada fase con su skill homónimo y su fichero de contexto asociado (el skill lo lee bajo demanda, no lo dupliques):
 
 | Fase | Skill | Contexto | Validación |

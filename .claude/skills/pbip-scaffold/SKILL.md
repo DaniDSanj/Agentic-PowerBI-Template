@@ -5,6 +5,15 @@ description: Crea la estructura de carpetas del proyecto Power BI (src/, themes/
 
 Requiere que `requirements-intake` haya cerrado ya requisitos y que `.claude/project-config.json` exista con `escenario` relleno. Si no es así, invoca `requirements-intake` primero.
 
+## Upstream (solo para el informe)
+
+Entra siempre por este skill; **no invoques `powerbi-report-cli` directamente**. Para crear el esqueleto del `.Report` puedes usar `powerbi-report-author scaffold` (ver [authoring.md](../powerbi-report-cli/references/authoring.md) y [pbip.md](../semantic-model-authoring/references/pbip.md) para la estructura PBIP). Reglas de la plantilla que acotan su uso:
+
+- **Nunca con `--force`**: `scaffold*` está en `allow` y `--force` sobrescribe ficheros del proyecto sin pedir permiso. Si el destino ya contiene un proyecto, para y pregunta.
+- `scaffold` genera también un `<nombre>.pbip` y un `.Report`. La regla de abajo ("no generes tú un `.pbip` desde cero") sigue mandando: úsalo **solo cuando el `.SemanticModel` ya exista en `src/`** (creado/convertido desde Desktop) y pásale `--model-path ../<Proyecto>.SemanticModel` para que el `.Report` quede enlazado por ruta; si no hay modelo, no lo ejecutes y declara el paso manual de Desktop. Que el resultado abra bien en Desktop está **sin verificar** hasta probarlo.
+- Con `--model-path` omitido escribe un binding placeholder: no lo dejes así en un commit.
+- Credenciales, `bindConnection` y publicación (`management`) quedan fuera del alcance del agente (`limites-duros.md`).
+
 ## Qué hacer
 
 1. Aplica la estructura exacta de `files/context/arquitectura-repositorio.md`:

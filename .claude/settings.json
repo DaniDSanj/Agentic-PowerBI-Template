@@ -82,7 +82,8 @@
       "Bash(powerbi-report-author preview *)",
       "Bash(powerbi-report-author pack*)",
       "Bash(powerbi-report-author unpack*)",
-      "Bash(az rest*)"
+      "Bash(az rest*)",
+      "mcp__powerbi-modeling-mcp"
     ],
     "deny": [
       "Bash(git push origin main*)",
@@ -94,7 +95,9 @@
       "Bash(git reset --hard*)",
       "Bash(git clean -f*)",
       "Bash(gh pr merge*)",
-      "Bash(gh repo delete*)"
+      "Bash(gh repo delete*)",
+      "Bash(powerbi-report-author scaffold*--force*)",
+      "mcp__powerbi-modeling-mcp__accept_eula"
     ]
   }
 }

@@ -42,6 +42,8 @@ Los siguientes ficheros **no se cargan automáticamente**. Antes de trabajar en 
 | `files/context/diseno.md` | Al diseñar el layout de una pestaña/página del informe. |
 | `files/context/herramientas-documentacion.md` | Al elegir herramientas para una tarea, o al mantener/regenerar documentación del proyecto. |
 
+**Enrutado de skills upstream:** entra siempre por el skill de la plantilla de la fase; él decide cuándo leer el skill upstream vendorizado (`powerbi-report-cli`, `semantic-model-authoring`) y en qué modo. No invoques el upstream directamente aunque su descripción case con la petición.
+
 ## Referencias
 
 Para citas verbatim, fechas de GA, y detalle ampliado de cualquier punto anterior, consulta `Investigacion_AgenticPowerBI_20260826.md` — es la fuente verificada (Microsoft Learn, blog oficial de Power BI, documentación de Tabular Editor) sobre la que se ha construido este documento.
