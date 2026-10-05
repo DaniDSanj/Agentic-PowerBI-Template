@@ -83,8 +83,9 @@ Plan: `docs/plan-integracion-skills-fabric-p1.md`.
 - **Hook BPA con envoltorios**: que `post-edit-tmdl` siga disparándose al editar `.tmdl` siguiendo `modelo-tmdl`/`medidas-dax`, y que el agente no escriba vía MCP por inercia del upstream (si lo hiciera, el hook no se dispara).
 - **Solapamiento de validadores**: que `powerbi-report-author validate` detecte IDs duplicados además de `pbir-schema-validator` (Fase 5.3 del plan).
 - **Gate de capturas en Desktop**: flujo `status` → abrir/recargar → captura con `--host desktop` y permiso `ask`; sin ejercitar. El host `service` se excluyó por diseño, no por prueba.
-- **`powerbi-report-author scaffold`**: crea `.pbip` + `.Report`; el resultado con `--model-path` abriéndose en Desktop sin probar, y su convivencia con el `.pbip` creado a mano. `scaffold --force` sigue sin deny/ask técnico (solo regla en el skill).
-- **`accept_eula` del MCP**: solo instrucción en `modelo-tmdl`/`medidas-dax`; sin `deny` técnico en `settings.json` ni línea en `limites-duros.md` (propuestas pendientes de decisión del usuario). Tampoco se ha comprobado cuándo/si el MCP lo exige.
+- **`powerbi-report-author scaffold`**: crea `.pbip` + `.Report`; el resultado con `--model-path` abriéndose en Desktop sin probar, y su convivencia con el `.pbip` creado a mano. Añadido `deny` `scaffold*--force*` en `settings.json`: sin probar en sesión que el patrón bloquee `--force` en cualquier posición de argumentos.
+- **`accept_eula` del MCP**: `deny` en `settings.json` y línea en `limites-duros.md` añadidos; sin probar que el `deny` por nombre de herramienta MCP bloquee de verdad (comprobar con `/permissions`). Tampoco se ha comprobado cuándo/si el MCP lo exige.
+- **`ask` sobre todo `mcp__powerbi-modeling-mcp`**: sin probar el comportamiento del patrón de servidor sin sufijo; previsible ruido en lecturas.
 - **`docs/brief/report-spec.md`**: ruta declarada solo en `diseno-informe`; no formalizada en `arquitectura-repositorio.md` (Fase 4) ni probada con planning real.
 - **Planning sin repetir preguntas**: que el agente realmente parta de `requirements-intake`/`project-config.json` en vez de re-preguntar audiencia y KPIs.
 - **Compatibilidad 0.4.0 ↔ skills v0.3.18**: sigue sin ejercitarse más allá de `--help` y `doctor`.
