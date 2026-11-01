@@ -1,5 +1,9 @@
 # Agentic-PowerBI-Template
 
+Plantilla para crear y mantener informes de Power BI y Microsoft Fabric con Claude Code sobre proyectos PBIP (TMDL para el modelo y PBIR para el informe). Cada cambio del modelo pasa por la validación BPA con Tabular Editor 2, y cada pull request comprueba además el esquema PBIR. En esta plantilla, «cliente» es el equipo de negocio que pide el informe.
+
+*Template for building and maintaining Power BI and Microsoft Fabric reports with Claude Code on PBIP projects (TMDL for the model and PBIR for the report). Every model change goes through BPA validation with Tabular Editor 2, and every pull request also checks the PBIR schema. In this template, "client" means the business team that requests the report.*
+
 Plantilla para mantener informes Power BI/Fabric de forma agéntica con Claude Code + VS Code, sobre proyectos PBIP/TMDL/PBIR. Este repositorio es un **[GitHub Template Repository](https://docs.github.com/es/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template)**: no contiene un informe real, pero sí contiene ya, en su sitio final (`.claude/`, `.github/workflows/`, `tools/`, `files/context/`, `CLAUDE.md`), todo lo que necesita un repositorio nuevo para arrancar el flujo agéntico desde el primer commit — sin ningún paso manual de copiar/pegar ficheros entre repos.
 
 ## Cómo empezar un proyecto nuevo a partir de esta plantilla
